@@ -6,11 +6,11 @@ import pandas as pd
 BASE_DIR = Path(__file__).resolve().parents[1]
 VERSIONS = ("V0", "V1", "V2", "V3", "V4")
 VERSION_METADATA = {
-    "V0": {"date": "2024-06-20", "title": "Initial Review", "description": "Vier kleine RCTs; die Evidenz ist noch unsicher.", "type": "Initiale Publikation"},
-    "V1": {"date": "2025-07-18", "title": "New evidence", "description": "Zwei neue RCTs, darunter SOMNI-TRIAL, stärken den geschätzten Nutzen.", "type": "Neue Studien"},
-    "V2": {"date": "2026-09-22", "title": "Contradictory evidence", "description": "Drei grosse Studien schwächen die Schätzung ab und erhöhen die Heterogenität.", "type": "Widersprüchliche Evidenz"},
-    "V3": {"date": "2027-07-15", "title": "Further evidence", "description": "Vier weitere RCTs lassen den Effekt weiter schrumpfen.", "type": "Neue Studien"},
-    "V4": {"date": "2027-10-10", "title": "Data correction", "description": "Korrektur des primären Endpunkts von SOMNI-TRIAL ohne neue Studie.", "type": "Datenkorrektur"},
+    "V0": {"date": "2024-06-20", "title": "Initial Review", "description": "Four small RCTs; the evidence remains uncertain.", "type": "Initial publication"},
+    "V1": {"date": "2025-07-18", "title": "New evidence", "description": "Two additional RCTs, including SOMNI-TRIAL, strengthen the estimated benefit.", "type": "New studies"},
+    "V2": {"date": "2026-09-22", "title": "Contradictory evidence", "description": "Three large trials weaken the pooled estimate and increase heterogeneity.", "type": "Contradictory evidence"},
+    "V3": {"date": "2027-07-15", "title": "Further evidence", "description": "Four additional RCTs reduce the pooled effect further.", "type": "New studies"},
+    "V4": {"date": "2027-10-10", "title": "Data correction", "description": "Correction of SOMNI-TRIAL's primary outcome without adding a new study.", "type": "Data correction"},
 }
 
 
@@ -25,7 +25,7 @@ def load_events() -> pd.DataFrame:
 def snapshot(version: str, studies: pd.DataFrame | None = None) -> pd.DataFrame:
     """Return the *as-known-at-version* data; revisions apply from V4 onward."""
     if version not in VERSIONS:
-        raise ValueError(f"Unbekannte Version: {version}")
+        raise ValueError(f"Unknown version: {version}")
     if studies is None:
         studies = load_studies()
     current_phase = int(version[-1])
