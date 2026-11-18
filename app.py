@@ -126,7 +126,7 @@ with section_review:
     b.metric("Participants", f"{fit.n_total:,}".replace(",", "’"))
     c.metric("Pooled MD", f"{fit.mean:+.2f}")
     d.metric("I² (Q-based)", f"{fit.i2:.1f} %")
-    st.caption(f"95% confidence interval: [{fit.ci_low:+.2f}; {fit.ci_high:+.2f}] ISI-Punkte · τ² = {fit.tau2:.3f} · Q-p = {fit.q_pvalue:.3g}")
+    st.caption(f"95% confidence interval: [{fit.ci_low:+.2f}; {fit.ci_high:+.2f}] ISI points · τ² = {fit.tau2:.3f} · Q-p = {fit.q_pvalue:.3g}")
     st.markdown(
         "**Reading the metrics:** The **MD** is the mean difference "
         "between groups (negative values favour SomniTech). The "
