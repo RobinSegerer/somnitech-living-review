@@ -35,28 +35,28 @@ st.markdown("""
 
 st.markdown('<div class="eyebrow">Educational simulation · Living evidence maintenance</div>', unsafe_allow_html=True)
 st.title("SomniTech · Living Evidence Lab")
-st.markdown('<p class="hero-sub">Wie verändern neue RCTs, widersprüchliche Ergebnisse und Datenkorrekturen eine laufend aktualisierte Metaanalyse?</p>', unsafe_allow_html=True)
-st.markdown('<div class="notice"><b>Vollständig fiktive Evidenz:</b> SomniTech und sämtliche Studien sind erfunden. Die Daten, Studiennamen und Publikationsdaten (einschliesslich 2027) sind ausschliesslich für die Lehre konstruiert. Keine klinischen Schlussfolgerungen ableiten.</div>', unsafe_allow_html=True)
+st.markdown('<p class="hero-sub">How do new RCTs, conflicting findings and data corrections change a continuously updated meta-analysis?</p>', unsafe_allow_html=True)
+st.markdown('<div class="notice"><b>Entirely fictional evidence:</b> SomniTech and all studies are invented. The data, study names and publication dates (including 2027) were created solely for teaching. Do not draw clinical conclusions.</div>', unsafe_allow_html=True)
 
 with st.sidebar:
-    st.header("Review steuern")
-    version = st.select_slider("Review-Version", options=list(VERSIONS), value="V0",
-                               help="Versionen repräsentieren historisch verfügbare Daten; V4 enthält eine Korrektur ohne neue Studie.")
+    st.header("Explore the review")
+    version = st.select_slider("Review version", options=list(VERSIONS), value="V0",
+                               help="Versions represent the evidence available at each point in time; V4 contains a data correction but no new study.")
     meta = VERSION_METADATA[version]
     st.caption(f"{meta['date']} · {meta['type']}")
     st.markdown(f"**{meta['title']}**")
     st.write(meta["description"])
     st.divider()
     threshold = st.number_input(
-        "Illustrative Relevanzschwelle (ISI-Punkte)", value=-2.0,
+        "Illustrative relevance threshold (ISI points)", value=-2.0,
         min_value=-10.0, max_value=-0.1, step=0.5,
-        help="Didaktisch gesetzte Schwelle, keine empirisch validierte minimale klinisch wichtige Differenz.",
+        help="Illustrative teaching threshold; not an empirically validated minimum clinically important difference.",
     )
-    st.caption("Negative Mittelwertdifferenzen sprechen für SomniTech. Ein Wert von −2 würde zwei ISI-Punkte geringere Symptomschwere bedeuten.")
+    st.caption("Negative mean differences favour SomniTech. A value of −2 means an average of two fewer ISI points in the intervention group.")
     st.divider()
-    st.markdown("**Analytische Konvention**")
-    st.caption("Random-Effects-Modell; REML für τ²; modifizierte Hartung-Knapp-Intervalle mit t(k−1). I² aus Cochran Q.")
-    st.caption("Bayes: normal-normal-Hierarchiemodell; Priors im Methodenvergleich konfigurierbar.")
+    st.markdown("**Analysis specification**")
+    st.caption("Random-effects model; REML for τ²; modified Hartung–Knapp intervals using t(k−1). I² based on Cochran's Q.")
+    st.caption("Bayesian analysis: normal–normal hierarchical model; priors can be adjusted in the methods comparison.")
 
 frame = snapshot(version)
 fit = fit_random_effects(frame)
@@ -70,70 +70,70 @@ for v in VERSIONS:
 history = pd.DataFrame(history_rows)
 
 section_review, section_lab, section_methods, section_workflow = st.tabs([
-    "01 · Living Review", "02 · Experimentierlabor",
-    "03 · Frequentistisch vs. Bayes", "04 · Workflow & Daten",
+    "01 · Living Review", "02 · Experiment Lab",
+    "03 · Frequentist vs. Bayesian", "04 · Workflow & Data",
 ])
 
 with section_review:
-    st.subheader("Der fiktive Fall: Wirksamkeit der Schlaf-App SomniTech")
+    st.subheader("The fictional case: Does the SomniTech sleep app work?")
     st.write(
-        "Ein Forschungsteam möchte wissen, ob eine **fiktive digitale Schlafintervention** "
-        "bei Erwachsenen mit Insomnie besser wirkt als eine allgemeine "
-        "**Schlafhygiene-Beratung**. Der Review berücksichtigt ausschliesslich "
-        "randomisierte kontrollierte Studien (RCTs). Im Laufe der Zeit erscheinen "
-        "neue Studien; ausserdem wird später eine fehlerhafte Datenextraktion korrigiert. "
-        "Du verfolgst, wie sich dadurch das Wissen verändert."
+        "A research team wants to know whether a **fictional digital sleep intervention** "
+        "works better for adults with insomnia than standard "
+        "**sleep-hygiene advice**. The review includes only "
+        "randomised controlled trials (RCTs). Over time, "
+        "new studies become available, and an incorrectly extracted outcome is later corrected. "
+        "Follow how these events change the evidence."
     )
-    st.markdown("**Die Forschungsfrage (PICO)**")
+    st.markdown("**The research question (PICO)**")
     p1, p2 = st.columns(2, gap="large")
     with p1:
-        st.markdown("**P – Population:** Erwachsene mit Insomnie  \n**I – Intervention:** digitale App *SomniTech*")
+        st.markdown("**P – Population:** Adults with insomnia  \n**I – Intervention:** digital app *SomniTech*")
     with p2:
-        st.markdown("**C – Vergleich:** allgemeine Schlafhygiene-Beratung  \n**O – Outcome:** Insomnia Severity Index (ISI) nach acht Wochen")
+        st.markdown("**C – Comparator:** general sleep-hygiene advice  \n**O – Outcome:** Insomnia Severity Index (ISI) at eight weeks")
     st.markdown(
-        "**Was wird verglichen?** Der ISI umfasst 0–28 Punkte; niedrigere Werte "
-        "bedeuten weniger Insomniesymptome. Wir analysieren die **Mittelwertdifferenz "
-        "der ISI-Endwerte nach acht Wochen** (Intervention minus Kontrolle), "
-        "nicht individuelle Veränderungen seit Studienbeginn. "
-        "Eine MD von **−2** bedeutet beispielsweise, dass die Interventionsgruppe "
-        "im Durchschnitt zwei ISI-Punkte niedriger liegt. Die hier einstellbare "
-        "Schwelle von −2 ist nur eine **didaktische Annahme**, keine validierte "
-        "Grenze klinisch relevanter Veränderungen."
+        "**What is being compared?** ISI scores range from 0 to 28; lower scores "
+        "indicate fewer insomnia symptoms. We analyse the **mean difference "
+        "in ISI scores at eight weeks** (intervention minus control), "
+        "not changes from baseline within individual participants. "
+        "An MD of **−2** means that, on average, the intervention group "
+        "scores two ISI points lower than the control group. The adjustable "
+        "threshold of −2 is an **illustrative teaching assumption**, not a validated "
+        "threshold for a clinically meaningful difference."
     )
     st.info(
-        "**So gehst du vor:** Wähle links zuerst **V0** und betrachte den Forest Plot. "
-        "Wechsle dann zu **V1–V4**: Was passiert mit der Gesamtschätzung, "
-        "dem Konfidenzintervall und der Heterogenität? Die orangefarbenen Studien "
-        "sind neu hinzugekommen. Mit der Schwelle in der Seitenleiste kannst du "
-        "eine angenommene klinische Relevanzgrenze verschieben."
+        "**Getting started:** Select **V0** in the sidebar and inspect the forest plot. "
+        "Then move through **V1–V4**: What happens to the pooled estimate, "
+        "confidence interval, and heterogeneity? Studies shown in orange "
+        "are newly included. Use the sidebar threshold to "
+        "explore different illustrative levels of clinical relevance."
     )
-    with st.expander("Warum ist das ein *Living* Review und nicht nur eine Metaanalyse?"):
+    with st.expander("Why is this a *living* review rather than just a meta-analysis?"):
         st.write(
-            "Die initiale Suche bildet V0. Danach werden neu erschienene Studien "
-            "durch regelmässige Suchläufe und Alerts entdeckt, gescreent, geprüft "
-            "und in die Analyse aufgenommen. Jede Version bewahrt einen eigenen "
-            "Datenstand. V4 demonstriert, dass auch **Korrekturen alter Daten** "
-            "eine Reanalyse auslösen können. Ein Suchlauf ohne neue Studien "
-            "führt hingegen nicht zwingend zu einer neuen Publikation."
+            "The initial literature search produces V0. Newly published studies are then "
+            "identified through scheduled searches and alerts, screened, assessed, "
+            "and added to the synthesis. Each review version preserves its own "
+            "evidence snapshot. V4 shows how **corrections to existing data** can also "
+            "trigger reanalysis. A search that identifies no eligible new studies "
+            "does not necessarily warrant a new published version."
         )
     st.divider()
-    st.subheader("Evidenzstand · " + version)
+    st.subheader("Evidence snapshot · " + version)
     guide = VERSION_GUIDE[version]
-    st.markdown(f"**Leitfrage: {guide['question']}**")
-    st.caption("Die folgenden Zahlen beziehen sich nur auf den ausgewählten, fiktiven Datenstand.")
+    st.markdown(f"**Guiding question: {guide['question']}**")
+    st.caption("The following metrics reflect only the selected fictional evidence snapshot.")
     a,b,c,d = st.columns(4)
-    a.metric("Studien", f"{fit.k}")
-    b.metric("Teilnehmende", f"{fit.n_total:,}".replace(",", "’"))
-    c.metric("Gepoolte MD", f"{fit.mean:+.2f}")
-    d.metric("I² (Q-basiert)", f"{fit.i2:.1f} %")
-    st.caption(f"95%-Konfidenzintervall: [{fit.ci_low:+.2f}; {fit.ci_high:+.2f}] ISI-Punkte · τ² = {fit.tau2:.3f} · Q-p = {fit.q_pvalue:.3g}")
+    a.metric("Studies", f"{fit.k}")
+    b.metric("Participants", f"{fit.n_total:,}".replace(",", "’"))
+    c.metric("Pooled MD", f"{fit.mean:+.2f}")
+    d.metric("I² (Q-based)", f"{fit.i2:.1f} %")
+    st.caption(f"95% confidence interval: [{fit.ci_low:+.2f}; {fit.ci_high:+.2f}] ISI-Punkte · τ² = {fit.tau2:.3f} · Q-p = {fit.q_pvalue:.3g}")
     st.markdown(
-        "**Zahlen lesen:** Die **MD** ist der durchschnittliche Unterschied "
-        "zwischen den Gruppen (negativ = günstiger für SomniTech). Das "
-        "**95%-KI** quantifiziert die statistische Unsicherheit. "
-        "**I²** beschreibt den Anteil beobachteter Variabilität der "
-        "Studieneffekte, der über die Stichprobenstreuung hinausgeht "
-        "(Q-basiert); es ist **kein Qualitätswert**."
+        "**Reading the metrics:** The **MD** is the mean difference "
+        "between groups (negative values favour SomniTech). The "
+        "**95% confidence interval** describes statistical uncertainty. "
+        "**I²** describes the proportion of observed variation in "
+        "study estimates that exceeds what is expected from sampling error "
+        "(based on Q); it is **not a study-quality score**."
     )
 
     col_forest, col_side = st.columns([2.25, 1.0], gap="large")
@@ -141,81 +141,81 @@ with section_review:
         st.plotly_chart(forest_plot(frame, fit, title=f"Forest Plot · {version}",
                                     highlight_phase=int(version[-1]) if version in ("V1", "V2", "V3") else None),
                         width="stretch", key=f"forest_{version}")
-        with st.expander("Lesehilfe: Was bedeuten Quadrate, Linien und Diamond?"):
+        with st.expander("How to read the forest plot: squares, lines, and the diamond"):
             st.markdown(
-                "- **Quadrat:** geschätzte Mittelwertdifferenz einer Studie; "
-                "grössere Quadrate zeigen ein höheres *Random-Effects-Gewicht* an.\n"
-                "- **Horizontale Linie:** 95%-Konfidenzintervall dieser Studie.\n"
-                "- **Grüner Diamond unten:** gepoolte Mittelwertdifferenz; seine "
-                "Breite steht für das 95%-KI des Gesamteffekts.\n"
-                "- **Gestrichelte Linie bei 0:** kein durchschnittlicher Unterschied "
-                "zwischen Intervention und Kontrolle.\n"
-                "- **Orange:** in V1–V3 neu eingeschlossene Studien. V4 korrigiert "
-                "dagegen die bereits vorhandene Studie S06.\n\n"
-                "**Maus-Tipp:** Fahre über ein Quadrat, um die einzelne MD, "
-                "ihr Konfidenzintervall und das Gewicht zu sehen."
+                "- **Square:** an individual study's estimated mean difference; "
+                "larger squares indicate greater *random-effects weight*.\n"
+                "- **Horizontal line:** the study's 95% confidence interval.\n"
+                "- **Green diamond at the bottom:** the pooled mean difference; its "
+                "width represents the 95% confidence interval of the pooled effect.\n"
+                "- **Dashed line at zero:** no average difference "
+                "between intervention and control.\n"
+                "- **Orange:** newly included studies in V1–V3. By contrast, V4 corrects "
+                "existing study S06.\n\n"
+                "**Hover tip:** Point to a square to see the study's MD, "
+                "confidence interval, and weight."
             )
     with col_side:
-        st.markdown("#### Was hat sich geändert?")
+        st.markdown("#### What changed?")
         st.info(meta["description"])
         if version != "V0":
             prev_name = VERSIONS[VERSIONS.index(version) - 1]
             prev = history.iloc[VERSIONS.index(version)-1]
-            st.metric("Veränderung der MD", f"{fit.mean - prev['mean']:+.2f}",
-                      help=f"Aktueller Effekt minus Effekt in {prev_name}.")
-            st.metric("Veränderung der Studienzahl", f"{fit.k-int(prev['k']):+d}")
-        st.write("**Was zeigt diese Version?**")
+            st.metric("Change in MD", f"{fit.mean - prev['mean']:+.2f}",
+                      help=f"Current effect minus the effect in {prev_name}.")
+            st.metric("Change in number of studies", f"{fit.k-int(prev['k']):+d}")
+        st.write("**What does this version show?**")
         st.write(guide["observation"])
-        st.write("**Worauf solltest du achten?**")
+        st.write("**What should you look for?**")
         st.caption(guide["try_this"])
-        st.write("**Statistische Einordnung**")
+        st.write("**Statistical interpretation**")
         if fit.ci_high < 0:
-            st.success("Das 95%-KI liegt unter Null. Im gewählten Modell ist die mittlere MD statistisch von Null unterscheidbar.")
+            st.success("The 95% confidence interval lies entirely below zero. Under the selected model, the pooled MD differs statistically from zero.")
         else:
-            st.warning("Das 95%-KI umfasst Null. Die Evidenz ist mit einem Null-Effekt vereinbar.")
+            st.warning("The 95% confidence interval includes zero; the data remain compatible with no average effect.")
         if fit.i2 > 75:
-            st.warning("Sehr hohe Heterogenität: Die gepoolte MD allein beschreibt die unterschiedlichen Studienresultate nur eingeschränkt.")
-        st.caption("Statistische Signifikanz beweist weder klinische Relevanz noch hohe Evidenzgewissheit.")
+            st.warning("Very high heterogeneity: the pooled MD alone may not adequately describe the variation across studies.")
+        st.caption("Statistical significance does not establish clinical importance or high certainty of evidence.")
 
-    st.markdown("#### Wie hat sich die Evidenz verändert?")
+    st.markdown("#### How has the evidence changed?")
     st.plotly_chart(history_plot(history, selected=version, threshold=threshold),
                     width="stretch", key="history_plot")
     st.caption(
-        "Jede Zeile zeigt den Gesamteffekt einer eigenen Review-Version mit "
-        "95%-KI. Die gestrichelte Nulllinie steht für keinen Unterschied; "
-        "die gepunktete Linie markiert die links festgelegte didaktische "
-        "Relevanzschwelle. Die aktuell gewählte Version ist orange hervorgehoben."
+        "Jede Zeile zeigt den Gesamteffekt einer eigenen Review version mit "
+        "95% confidence interval. The dashed zero line denotes no difference; "
+        "the dotted line marks the illustrative "
+        "relevance threshold set in the sidebar. The selected version is highlighted in orange."
     )
     st.info(
-        "**Merke:** Eine spätere Version kann die frühere Schlussfolgerung "
-        "bestätigen, abschwächen oder umkehren. Die wiederholten "
-        "Konfidenzintervalle sind hier nicht für sequenzielles Testen adjustiert."
+        "**Key point:** A later version may confirm, weaken, or reverse "
+        "earlier conclusions. The repeated frequentist "
+        "confidence intervals have not been adjusted for sequential testing."
     )
     table_hist = history.copy()
-    table_hist["95%-KI"] = table_hist.apply(lambda r:f"[{r.ci_low:.2f}; {r.ci_high:.2f}]", axis=1)
+    table_hist["95% CI"] = table_hist.apply(lambda r:f"[{r.ci_low:.2f}; {r.ci_high:.2f}]", axis=1)
     table_hist["MD"] = table_hist["mean"].round(2)
     table_hist["I² (%)"] = table_hist["i2"].round(1)
-    st.dataframe(table_hist[["version", "date", "k", "MD", "95%-KI", "I² (%)"]],
+    st.dataframe(table_hist[["version", "date", "k", "MD", "95% CI", "I² (%)"]],
                  hide_index=True, width="stretch")
 
-    st.markdown("#### Risk-of-Bias-Sensitivität")
+    st.markdown("#### Risk-of-bias sensitivity analysis")
     st.write(
-        "Nicht jede Studie ist methodisch gleich vertrauenswürdig. Hier wird "
-        "die Metaanalyse versuchsweise nur mit Studien gerechnet, die im "
-        "**simulierten RoB-Label ‚Low‘** tragen. Vergleiche das Ergebnis mit "
-        "der Gesamtanalyse. Dies ist eine vereinfachte Sensitivitätsanalyse, "
-        "keine vollständige RoB-2- oder GRADE-Bewertung."
+        "Not all studies are equally trustworthy. Here, we rerun "
+        "the meta-analysis using only those studies assigned the "
+        "**simulated risk-of-bias category 'Low'**. Compare this result with "
+        "the full analysis. This is a simplified sensitivity analysis, "
+        "not a complete RoB 2 or GRADE assessment."
     )
     lowrisk = frame.loc[frame["rob"].eq("Low")].copy()
     if len(lowrisk) >= 2:
         lower_fit = fit_random_effects(lowrisk)
         a,b = st.columns(2)
-        a.metric("Nur RoB = Low", f"{lower_fit.mean:+.2f}",
+        a.metric("Low risk of bias only", f"{lower_fit.mean:+.2f}",
                  help=f"{len(lowrisk)} von {len(frame)} Studien.")
-        b.metric("95%-KI dieser Teilmenge", f"[{lower_fit.ci_low:+.2f}; {lower_fit.ci_high:+.2f}]")
-        st.caption("Explorative Sensitivitätsanalyse. Keine automatische Evidenzbewertung nach GRADE; einzelne RoB-2-Domänen werden nicht simuliert.")
+        b.metric("95% CI for this subset", f"[{lower_fit.ci_low:+.2f}; {lower_fit.ci_high:+.2f}]")
+        st.caption("Exploratory sensitivity analysis only. No automatic GRADE certainty assessment; individual RoB 2 domains are not simulated.")
     else:
-        st.caption("Für diese Version sind weniger als zwei Studien mit niedrigem Risk of Bias vorhanden.")
+        st.caption("Fewer than two studies are classified as low risk of bias in this version.")
 
 with section_lab:
     st.subheader("Experimentierlabor · Wie beeinflussen einzelne Studien die Synthese?")
@@ -223,7 +223,7 @@ with section_lab:
         "Hier kannst du die Metaanalyse selbst verändern. Du arbeitest mit den "
         f"**{fit.k} Studien aus {version}** als Startpunkt. Das Labor ist eine "
         "**Was-wäre-wenn-Simulation**: Es verändert keine publizierten "
-        "Originaldaten und legt keine neuen Review-Versionen an."
+        "Originaldaten und legt keine neuen Review versionen an."
     )
     st.markdown("**Was kannst du ausprobieren?**")
     st.markdown(
@@ -371,7 +371,7 @@ with section_methods:
         f"Beide Analysen verwenden **dieselben {fit.k} synthetischen Studien "
         f"aus {version}** und ein Random-Effects-Modell. "
         "Sie beantworten verwandte Fragen, aber die Unsicherheit wird "
-        "unterschiedlich ausgedrückt. Wechsle links die Review-Version und "
+        "unterschiedlich ausgedrückt. Wechsle links die Review version und "
         "beobachte, wie sich beide Ergebnisse mit neuer Evidenz verändern."
     )
     concept_f, concept_b = st.columns(2, gap="large")
@@ -427,7 +427,7 @@ with section_methods:
     with fa:
         st.markdown("#### Frequentistisch")
         st.metric("Gepoolte MD (REML)", f"{fit.mean:+.2f}")
-        st.write(f"95%-Konfidenzintervall: **[{fit.ci_low:+.2f}; {fit.ci_high:+.2f}]**")
+        st.write(f"95% confidence interval: **[{fit.ci_low:+.2f}; {fit.ci_high:+.2f}]**")
         st.write(f"Zwischenstudienvarianz τ²: **{fit.tau2:.3f}**")
         st.caption("95%-KI: Interpretation über die langfristige Überdeckungsrate des Verfahrens, nicht als Posteriorwahrscheinlichkeit.")
     with fb:
@@ -457,7 +457,7 @@ with section_methods:
                     width="stretch", key="bayes_posterior")
     st.markdown("#### 4 · Wie ändert sich die Wahrscheinlichkeit über die Versionen?")
     st.write(
-        "Die Kurve zeigt für jede Review-Version die bayesianische "
+        "Die Kurve zeigt für jede Review version die bayesianische "
         "Wahrscheinlichkeit, dass die wahre durchschnittliche MD unter "
         "der gewählten Relevanzschwelle liegt. Sie ist **keine** "
         "Wahrscheinlichkeit, dass eine einzelne Studie signifikant wird. "
@@ -473,7 +473,7 @@ with section_methods:
                                mode="lines+markers", marker=dict(size=11, color=BLUE),
                                line=dict(width=3, color=BLUE)))
     fig.update_layout(template="plotly_white", height=290,
-                      xaxis_title="Review-Version", yaxis_title=f"P(μ < {threshold:g}) in %",
+                      xaxis_title="Review version", yaxis_title=f"P(μ < {threshold:g}) in %",
                       yaxis_range=[0,100], margin=dict(l=10,r=10,t=25,b=40))
     st.plotly_chart(fig, width="stretch", key="bayes_history")
     with st.expander("Häufige Verständnisfragen: KI, Kredibilitätsintervall, Priors und Updating"):
@@ -505,7 +505,7 @@ with section_methods:
         st.write("Die festgelegte Schwelle von zwei ISI-Punkten ist rein didaktisch. Weder ein grosses Posterior-P noch ein p-Wert kann unzureichende interne Validität, Publikationsbias oder Modellfehlanpassung ausgleichen.")
 
 with section_workflow:
-    st.subheader("Vom Such-Alert zur neuen Review-Version")
+    st.subheader("Vom Such-Alert zur neuen Review version")
     st.write("Ein Living Review ist mehr als ein wiederholt ausgeführtes Metaanalyse-Skript: Monitoring, Screening, Datenprüfung, Reanalyse, Interpretation und Veröffentlichung sind getrennte Vorgänge.")
     st.markdown("**Prozessmodell**")
     p1,p2,p3,p4,p5 = st.columns(5)
@@ -533,5 +533,5 @@ with section_workflow:
                       file_name="somnitech_versions.csv", mime="text/csv")
     st.divider()
     st.markdown("**Worüber sollte der Review informieren?**")
-    st.write("Die Simulation unterscheidet drei Entscheidungen: **(1)** Muss nach dem Monitoring neu gescreent werden? **(2)** Erfordern neue oder korrigierte Daten eine Reanalyse? **(3)** Rechtfertigt die Neubewertung eine neue publizierte Review-Version?")
+    st.write("Die Simulation unterscheidet drei Entscheidungen: **(1)** Muss nach dem Monitoring neu gescreent werden? **(2)** Erfordern neue oder korrigierte Daten eine Reanalyse? **(3)** Rechtfertigt die Neubewertung eine neue publizierte Review version?")
     st.caption("Die im Ereignisprotokoll dokumentierten Updates und Veröffentlichungen sind Teil der Simulation. Die App führt keine echte PubMed-Suche durch und ermittelt keine reale klinische Evidenz.")
