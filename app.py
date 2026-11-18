@@ -12,7 +12,8 @@ from src.analysis import (
 )
 from src.data import VERSION_METADATA, VERSIONS, load_events, snapshot
 from src.explanations import LAB_EXPERIMENTS, VERSION_GUIDE
-from src.plots import BLUE, forest_plot, history_plot, posterior_plot
+from src.plots import BLUE, forest_plot, history_plot, posterior_plot, updating_plot
+from src.updating import build_updating_story
 
 st.set_page_config(
     page_title="SomniTech | Living Evidence Lab",
@@ -455,7 +456,137 @@ with section_methods:
     density = bayesian_density(frame, mu_prior_sd=mu_prior_sd, tau_prior_sd=tau_prior_sd)
     st.plotly_chart(posterior_plot(density, threshold, bayes.ci_low, bayes.ci_high),
                     width="stretch", key="bayes_posterior")
-    st.markdown("#### 4 · How does the probability change across review versions?")
+    st.divider()
+    st.markdown("#### 4 · Watch the Bayesian update happen")
+    st.write(
+        "A Bayesian prior is **not fixed forever**. Once we have analysed an earlier "
+        "review version, its **joint posterior for the overall effect μ and "
+        "heterogeneity τ becomes the prior for the next update**. New trials "
+        "can strengthen, weaken, or even reverse earlier conclusions."
+    )
+    st.write(
+        "Choose an update below. This selector is independent of the review version "
+        "in the sidebar, so you can compare any step in the evidence timeline."
+    )
+    update_version = st.select_slider(
+        "Bayesian update to inspect",
+        options=list(VERSIONS),
+        value=version if version != "V0" else "V1",
+        help="V0: original prior and first four trials. V1–V3: previous posterior plus new trials. V4: replace an erroneous outcome; no new trial.",
+        key="bayesian_update_to_inspect",
+    )
+    story = build_updating_story(
+        update_version,
+        threshold=threshold,
+        mu_prior_sd=mu_prior_sd,
+        tau_prior_sd=tau_prior_sd,
+    )
+    before_label = "Original prior" if story.previous_version is None else f"Posterior from {story.previous_version}"
+    after_label = f"Posterior for {story.version}"
+    if story.kind == "initial":
+        st.info(
+            "**V0 · Initial synthesis:** Start from Normal(0, SD) for μ and a half-normal "
+            "prior for τ, then learn from the four initial trials. This is the "
+            "first update, before any published review version exists."
+        )
+    elif story.kind == "correction":
+        st.warning(
+            "**V4 · Data correction, not a new trial:** The old S06 four-week result "
+            "is removed and replaced by its corrected eight-week result. "
+            "Simply multiplying the V3 posterior by the corrected study's "
+            "likelihood would **double-count S06**. This figure instead shows "
+            "the correct before/after revision based on the valid snapshots."
+        )
+        st.caption(f"Revised study IDs: {', '.join(story.corrected_studies)}.")
+    else:
+        st.success(
+            f"**{story.previous_version} → {story.version}:** "
+            f"{len(story.added_studies)} newly included trial(s): "
+            + ", ".join(story.added_studies)
+        )
+    step_a, step_b, step_c = st.columns(3, gap="medium")
+    with step_a:
+        st.markdown(f"**1 · Before update**")
+        st.caption(f"{before_label}. Blue curve: our uncertainty about μ before this step.")
+    with step_b:
+        st.markdown("**2 · Information from the update**")
+        st.caption(
+            "Dotted orange: which effect values gain relative support from the new "
+            "evidence (or the correction in V4), allowing for uncertainty in τ."
+        )
+    with step_c:
+        st.markdown("**3 · After update**")
+        st.caption(f"{after_label}. Green curve: the revised probability distribution for μ.")
+    st.plotly_chart(
+        updating_plot(story, threshold),
+        width="stretch",
+        key=f"bayesian_step_chart_{update_version}",
+    )
+    st.caption(
+        "**Important:** The two solid curves are actual marginal probability densities. "
+        "The dotted orange curve is the **relative updating factor**, scaled to a "
+        "maximum of 1 on the visible overlap range and plotted on the right axis. "
+        "It is **not** a probability density or a separate posterior. "
+        "The factor accounts for uncertainty about τ inherited from the preceding data."
+    )
+    st.markdown("**How much did our probability assessments change?**")
+    probability_comparison = pd.DataFrame({
+        "Question": [
+            "P(μ < 0) · Any average benefit",
+            f"P(μ < {threshold:g}) · Benefit beyond illustrative threshold",
+        ],
+        "Before": [story.prior_benefit, story.prior_relevant],
+        "After": [story.posterior_benefit, story.posterior_relevant],
+    })
+    probability_comparison["Change (percentage points)"] = (
+        100.0 * (probability_comparison["After"] - probability_comparison["Before"])
+    )
+    probability_comparison["Before"] = probability_comparison["Before"].map(lambda p: f"{p:.1%}")
+    probability_comparison["After"] = probability_comparison["After"].map(lambda p: f"{p:.1%}")
+    probability_comparison["Change (percentage points)"] = (
+        probability_comparison["Change (percentage points)"].map(lambda p: f"{p:+.1f} pp")
+    )
+    st.dataframe(probability_comparison, hide_index=True, width="stretch")
+    st.caption(
+        f"Evidence snapshots: {story.study_count_before} studies before and "
+        f"{story.study_count_after} after this step. A change in probability "
+        "does not by itself establish certainty of evidence or clinical benefit."
+    )
+    with st.expander("Why does the entire joint posterior matter?"):
+        if story.kind == "correction":
+            st.latex(
+                r"p(\mu,\tau\mid D_{\mathrm{revised}})\propto "
+                r"p(\mu,\tau\mid D_{\mathrm{old}})\,"
+                r"\frac{p(y_{S06}^{\mathrm{corrected}}\mid\mu,\tau)}"
+                r"{p(y_{S06}^{\mathrm{old}}\mid\mu,\tau)}"
+            )
+            st.write(
+                "The old S06 likelihood contribution must be removed before adding "
+                "the corrected contribution. Recalculating with the corrected "
+                "snapshot is equivalent and avoids double-counting."
+            )
+        else:
+            st.latex(
+                r"p(\mu,\tau\mid D_{\mathrm{old}},D_{\mathrm{new}})\propto "
+                r"p(D_{\mathrm{new}}\mid\mu,\tau)\,"
+                r"p(\mu,\tau\mid D_{\mathrm{old}})"
+            )
+            st.write(
+                "The current joint posterior is formed from the previous **joint** "
+                "posterior and the likelihood of only the newly added studies. "
+                "Keeping merely the marginal posterior of μ would discard "
+                "dependence between μ and τ."
+            )
+        st.write(
+            "For numerical stability and reproducibility, the app recomputes each "
+            "complete snapshot using the same initial priors. With an unchanged "
+            "model this yields the same posterior as exact sequential updating. "
+            "The orange curve is calculated as the ratio of the two marginal "
+            "posterior densities; it is an **effective update factor for μ**, "
+            "not a conventional likelihood based on a fixed value of τ."
+        )
+
+    st.markdown("#### 5 · How does the probability change across review versions?")
     st.write(
         "For each review version, the chart shows the Bayesian "
         "probability that the true overall MD is below "
