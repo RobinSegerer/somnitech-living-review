@@ -56,27 +56,27 @@ def validate_studies(frame: pd.DataFrame, min_studies: int = 2) -> pd.DataFrame:
     """Return a copy with typed study-level data; reject incomplete/invalid input."""
     missing = set(REQUIRED_COLUMNS) - set(frame.columns)
     if missing:
-        raise ValueError(f"Erforderliche Spalten fehlen: {', '.join(sorted(missing))}")
+        raise ValueError(f"Required columns are missing: {', '.join(sorted(missing))}")
     out = frame.copy()
     if len(out) < min_studies:
-        raise ValueError(f"Mindestens {min_studies} vollständige Studien erforderlich.")
+        raise ValueError(f"At least {min_studies} complete studies are required.")
     for col in ("study_id", "author_year"):
         if out[col].isna().any() or out[col].astype(str).str.strip().eq("").any():
-            raise ValueError(f"'{col}' darf keine leeren Werte enthalten.")
+            raise ValueError(f"'{col}' must not contain missing values.")
     if out["study_id"].duplicated().any():
-        raise ValueError("'study_id' muss für jede Studie eindeutig sein.")
+        raise ValueError("'study_id' must be unique for each study.")
     for col in NUMERICAL_COLUMNS:
         out[col] = pd.to_numeric(out[col], errors="coerce")
         if not np.isfinite(out[col].to_numpy(dtype=float)).all():
-            raise ValueError(f"Spalte '{col}' enthält fehlende oder ungültige Werte.")
+            raise ValueError(f"Spalte '{col}' contains missing or invalid values.")
     for col in ("n_int", "n_ctrl"):
         values = out[col].to_numpy(float)
         if (values < 2).any() or not np.all(values == np.floor(values)):
-            raise ValueError(f"'{col}' muss eine ganze Zahl ≥ 2 sein.")
+            raise ValueError(f"'{col}' must be an integer ≥ 2.")
         out[col] = out[col].astype(int)
     for col in ("sd_int", "sd_ctrl"):
         if (out[col] <= 0).any():
-            raise ValueError(f"'{col}' muss positiv sein.")
+            raise ValueError(f"'{col}' must be positive.")
     return out.reset_index(drop=True)
 
 
@@ -157,9 +157,9 @@ def fit_bayesian(
     integrate tau numerically, without MCMC sampling.
     """
     if not (mu_prior_sd > 0 and tau_prior_sd > 0):
-        raise ValueError("Prior-Standardabweichungen müssen positiv sein.")
+        raise ValueError("Prior standard deviations must be positive.")
     if grid_size < 401:
-        raise ValueError("Mindestens 401 Gitterpunkte für die Integration erforderlich.")
+        raise ValueError("At least 401 grid points required for integration.")
     effects = calculate_effects(frame)
     yi, vi = effects["yi"].to_numpy(float), effects["vi"].to_numpy(float)
     max_tau = max(10.0, 9.0 * tau_prior_sd, np.ptp(yi) * 5.0)
