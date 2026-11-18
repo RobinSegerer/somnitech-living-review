@@ -1,93 +1,92 @@
-"""User-facing, version-specific explanations for the fictional teaching scenario.
+"""Version-specific reading guides and exercises for the fictional SomniTech study.
 
-Keeping the learning content separate from the statistical engine makes it
-reviewable, testable and translatable without changing the calculations.
+Teaching copy is kept separate from the statistical engine so that it can be
+reviewed, tested, and translated without affecting the estimates.
 """
 from __future__ import annotations
 
 VERSION_GUIDE = {
     "V0": {
-        "question": "Wie sicher ist der anfängliche Hinweis auf einen Nutzen?",
+        "question": "How convincing is the initial indication of benefit?",
         "observation": (
-            "Vier kleine Studien liefern eine negative gepoolte Mittelwertdifferenz. "
-            "Das 95%-Konfidenzintervall umfasst jedoch die Null: Ein Null-Effekt "
-            "ist mit diesen Daten und dem gewählten Modell vereinbar."
+            "Four small trials yield a negative pooled mean difference (MD), "
+            "but the 95% confidence interval includes zero. The data and the "
+            "selected model are compatible with no average effect."
         ),
         "try_this": (
-            "Betrachte die einzelnen Konfidenzintervalle im Forest Plot. "
-            "Warum ist das Gesamtergebnis trotz überwiegend negativer Schätzungen unsicher?"
+            "Examine the confidence intervals of the individual studies in the forest plot. "
+            "Why is the pooled result still uncertain although most estimates favour SomniTech?"
         ),
     },
     "V1": {
-        "question": "Was bewirkt die Integration einer grossen neuen Studie?",
+        "question": "What changes when a large new trial is added?",
         "observation": (
-            "Gupta und SOMNI-TRIAL werden neu aufgenommen (orange markiert). "
-            "Die gepoolte Schätzung verschiebt sich stärker zugunsten der Intervention; "
-            "das Intervall umfasst die Null nun nicht mehr."
+            "Gupta and SOMNI-TRIAL enter the review (highlighted in orange). "
+            "The pooled estimate moves further in favour of the intervention, "
+            "and the 95% confidence interval no longer includes zero."
         ),
         "try_this": (
-            "Fahre im Forest Plot mit dem Mauszeiger über SOMNI-TRIAL und lies ihr "
-            "Random-Effects-Gewicht ab. Eine grosse Stichprobe bedeutet bei "
-            "Heterogenität nicht automatisch ein dominierendes Gewicht."
+            "Hover over SOMNI-TRIAL in the forest plot to inspect its random-effects weight. "
+            "With substantial heterogeneity, a large sample size does not necessarily "
+            "translate into a dominant weight."
         ),
     },
     "V2": {
-        "question": "Was passiert, wenn neue grosse Studien widersprechen?",
+        "question": "What happens when new, large trials contradict earlier findings?",
         "observation": (
-            "Drei grosse RCTs berichten kleine oder gegenteilige Effekte. "
-            "Der gepoolte Effekt bewegt sich in Richtung Null und I² nimmt stark zu. "
-            "Eine grössere Datenbasis führt hier nicht zu einer eindeutigeren Aussage."
+            "Three large RCTs report small effects or effects in the opposite direction. "
+            "The pooled estimate moves towards zero and I² rises sharply. "
+            "Here, more data do not lead to a more decisive conclusion."
         ),
         "try_this": (
-            "Vergleiche V1 und V2 in der Verlaufsgrafik. Beobachte sowohl die "
-            "Lage des Schätzwerts als auch die Intervallbreite und Heterogenität."
+            "Compare V1 and V2 in the history chart. Note the pooled estimate, "
+            "the confidence interval, and the increased heterogeneity."
         ),
     },
     "V3": {
-        "question": "Ist mehr Evidenz automatisch zuverlässiger?",
+        "question": "Does a larger evidence base always mean greater certainty?",
         "observation": (
-            "Vier weitere Studien werden eingeschlossen. Die durchschnittliche "
-            "Wirkung fällt nochmals geringer aus; die zwischen den Studien sichtbaren "
-            "Unterschiede bleiben beträchtlich."
+            "Four additional studies are included. The estimated average benefit "
+            "becomes smaller again, while substantial differences between studies remain."
         ),
         "try_this": (
-            "Untersuche die Low-RoB-Sensitivitätsanalyse. Ändert sich die Schätzung, "
-            "wenn Studien mit höherem Risk of Bias nicht berücksichtigt werden?"
+            "Explore the low-risk-of-bias sensitivity analysis. "
+            "Does the estimate change when studies with higher risk of bias are excluded?"
         ),
     },
     "V4": {
-        "question": "Kann sich ein Review ohne neue Studie verändern?",
+        "question": "Can a review change without adding any new studies?",
         "observation": (
-            "Es kommt keine neue Studie hinzu. Stattdessen wird bei SOMNI-TRIAL "
-            "der versehentlich extrahierte Vierwochenwert durch den korrekten "
-            "Achtwochenwert ersetzt. Die Meta-Analyse verändert sich trotzdem."
+            "No new study is added. Instead, SOMNI-TRIAL's incorrectly extracted "
+            "four-week outcome is replaced by the correct eight-week outcome. "
+            "The meta-analysis changes nevertheless."
         ),
         "try_this": (
-            "Vergleiche die Zahl der Studien in V3 und V4. Öffne dann "
-            "‚Workflow & Daten‘ und suche im Ereignisprotokoll die Datenkorrektur S06."
+            "Compare the number of studies in V3 and V4. Then open "
+            "'Workflow & Data' and locate the S06 correction in the event log."
         ),
     },
 }
 
 LAB_EXPERIMENTS = [
     (
-        "A · Eine grosse Nullstudie hinzufügen",
-        "Ergänze über ‚Neue synthetische Studie hinzufügen‘ eine RCT mit "
-        "je **500 Personen**, **MW Int. = 12**, **MW Kontr. = 12** und **SD = 4** "
-        "in beiden Gruppen. Vergleiche anschliessend die gepoolte MD und das "
-        "Konfidenzintervall mit der gewählten Originalversion.",
+        "A · Add a large null-effect trial",
+        "Use **Add a new synthetic study** to enter an RCT with "
+        "**500 participants per group**, **intervention mean = 12**, "
+        "**control mean = 12**, and **SD = 4** in both groups. "
+        "Compare the pooled MD and its confidence interval with the original version.",
     ),
     (
-        "B · Nur die Präzision verändern",
-        "Setze für dieselbe neue Studie die **Stichprobengrössen auf je 30**, "
-        "ohne die Mittelwerte zu ändern. Was passiert mit der Breite ihres "
-        "Konfidenzintervalls und ihrem Gewicht im Forest Plot?",
+        "B · Change precision, not the effect",
+        "For the same new study, reduce the **sample size to 30 per group** "
+        "without changing the means. What happens to its confidence interval "
+        "and its weight in the forest plot?",
     ),
     (
-        "C · Daten korrigieren",
-        "Ändere in einer bestehenden Studie den **Interventionsmittelwert** "
-        "und klicke auf **‚Änderungen übernehmen und neu berechnen‘**. "
-        "Beobachte, ob sich die Schätzung oder die Heterogenität verändert. "
-        "Mit ‚Experiment zurücksetzen‘ gelangst du zum Ausgangspunkt zurück.",
+        "C · Correct an existing study",
+        "Change the **intervention mean** of an existing study and select "
+        "**Apply changes and recalculate**. Observe whether the pooled estimate "
+        "or heterogeneity changes. Use **Reset experiment to original version** "
+        "to return to the starting point.",
     ),
 ]
