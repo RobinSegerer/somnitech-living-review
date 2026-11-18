@@ -1,105 +1,120 @@
 # SomniTech · Living Evidence Lab
 
-**Interaktive deutschsprachige Streamlit-Anwendung zur Demonstration von Living Systematic Reviews und kumulativen Random-Effects-Metaanalysen.**
+An interactive **Streamlit teaching application** for demonstrating how a living systematic review changes when new trials appear, findings conflict, or previously extracted data are corrected. The app presents the same simulated evidence through frequentist and Bayesian random-effects meta-analysis.
 
-> **Wichtig:** Alle Studien, Daten und Publikationen sind **synthetisch**. *SomniTech* ist eine fiktive App. Die Simulation enthält bewusst zukünftige Studien aus 2027. Die Ergebnisse sind **keine klinische Evidenz** und dürfen nicht für medizinische Entscheidungen verwendet werden.
+> **Entirely fictional evidence.** The SomniTech app, study names, results, and publication dates (including dates in 2027) are invented for teaching. The findings are **not clinical evidence** and must not be used for medical decisions.
 
-## Sofort starten
+## Run the application locally
 
-Voraussetzung: Python 3.11–3.13, Terminal (macOS/Linux/Windows) und Internet für die Erstinstallation der Pakete.
+Requirements: Python 3.11–3.13, a terminal, and internet access for installing dependencies.
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+git clone https://github.com/RobinSegerer/somnitech-living-review.git
+cd somnitech-living-review
+python -m venv .venv
+source .venv/bin/activate         # macOS / Linux
+# Windows: .venv\Scripts\activate
 python -m pip install -r requirements.txt
-python -m streamlit run app.py
+streamlit run app.py
 ```
 
-Die Anwendung öffnet sich im Browser, normalerweise unter `http://localhost:8501`. Beenden mit `Ctrl+C` im Terminal.
+Streamlit normally opens the app at `http://localhost:8501`. Stop the server with `Ctrl+C`.
 
-## Vier Bereiche
+## What you can do
 
-1. **Living Review:** Einführung in die fiktive SomniTech-Studiengeschichte mit PICO und Erläuterung des ISI; Version V0 bis V4 wählen. Die Seite enthält eine Forest-Plot-Lesehilfe, dynamische Leitfragen zu jeder Version, die Interpretation von MD, Konfidenzintervall und I² sowie eine Low-RoB-Sensitivitätsanalyse.
-2. **Experimentierlabor:** Schritt-für-Schritt-Anleitung mit drei konkreten Übungen (grosse Nullstudie, Präzision verändern, Datenkorrektur). Gruppendaten in einer Tabelle editieren, zusätzliche hypothetische RCTs hinzufügen, Random-Effects-Metaanalyse neu berechnen, Studien als CSV exportieren. Experimentelle Werte bleiben ausschliesslich in der aktuellen Streamlit-Sitzung und verändern die Original-CSV nicht.
-3. **Frequentistisch vs. Bayes:** Erläuterung der beiden Unsicherheitsbegriffe, Prior-Wahl und typische Interpretationsfehler; REML/Hartung-Knapp gegen analytisch integrierte normal-normale bayesianische Random-Effects-Metaanalyse mit verstellbaren Priors und Posteriorwahrscheinlichkeit eines illustrativ relevanten Effekts.
-4. **Workflow & Daten:** Suche/Screening/Extraktion/Reanalyse/Publikation; Ereignisprotokoll und Exporte für Snapshots, Versionen und Suchereignisse.
+### 01 · Living Review
 
-### Kurze geführte Tour
+Start with the fictional PICO question: does the SomniTech digital insomnia intervention lower the **Insomnia Severity Index (ISI)** at eight weeks compared with general sleep-hygiene advice?
 
-1. Öffne **01 · Living Review** und lies zunächst die fiktive Forschungsfrage. Wähle links **V0**, dann **V1** bis **V4**. Erkunde mit dem Mauszeiger Studiengewicht und Konfidenzintervalle und beachte, was sich in V4 *ohne* neue Studie verändert.
-2. Öffne **02 · Experimentierlabor**. Klappe **Drei angeleitete Experimente** auf und füge z. B. eine grosse Nullstudie hinzu; beobachte rechts den Unterschied zur Originalanalyse.
-3. Öffne **03 · Frequentistisch vs. Bayes**. Variiere zuerst den Prior für den durchschnittlichen Effekt μ, dann für die Heterogenität τ. Vergleiche, was das 95%-Konfidenzintervall, das 95%-Kredibilitätsintervall und P(μ < −2) aussagen.
-4. Unter **04 · Workflow & Daten** siehst du, welche Schritte den simulierten Analyseversionen zugrunde liegen.
+Select **V0–V4** in the sidebar. Observe the pooled mean difference (MD), its 95% confidence interval (CI), between-study heterogeneity, and the forest plot. Newly included studies are highlighted. Each version offers a guiding question, an interpretation of the results, and a suggested activity. A low-risk-of-bias sensitivity analysis is available.
 
-## Daten und didaktischer Verlauf
+The effect is the **difference between follow-up means**, not a within-person change from baseline. A negative MD favours SomniTech.
 
-| Version | Studien | Was passiert? |
-| --- | ---: | --- |
-| V0 · 2024 | 4 | Basisreview mit unsicherem Effekt |
-| V1 · 2025 | 6 | Grosse positive RCT verstärkt Evidenz |
-| V2 · 2026 | 9 | Drei grosse Studien mit kleinen/gegenteiligen Effekten |
-| V3 · 2027 | 13 | Mehr, aber heterogene Evidenz |
-| V4 · 2027 | 13 | Revision des extrahierten Achtwochenwerts von S06 ohne neue Studie |
+### 02 · Experiment Lab
 
-Die `studies.csv` beinhaltet die ursprünglichen und separat gespeicherten korrigierten Werte. `src/data.py` wendet die Korrektur **erst ab V4** an. Alle historischen Versionen bleiben reproduzierbar.
+Edit sample sizes, means, standard deviations, or risk-of-bias labels, then select **Apply changes and recalculate**. Alternatively, add a synthetic RCT, inspect the revised forest plot, reset to the original version, or export the experimental dataset.
 
-### Statistik
+Three guided activities show how to:
 
-- Primärer Endpunkt: achtwöchiger Insomnia Severity Index (ISI), niedriger = besser
-- **MD**: Mittelwert Intervention minus Mittelwert Kontrolle
-- **Studienvarianz**: `sd_int² / n_int + sd_ctrl² / n_ctrl`
-- **Frequentistisch**: Normal-Normal-Random-Effects-Modell; REML-Schätzung von τ²; 95%-KI mit modifizierter Hartung-Knapp-Methode: `max(1, Q_RE / (k−1)) / sum(weights)` und `t(k−1)`-Quantil. I² aus dem fix gewichteten Cochran-Q.
-- **Bayesianisch**: `yi | μ, τ ~ Normal(μ, vi+τ²)`, `μ ~ Normal(0, σμ²)`, `τ ~ HalfNormal(στ)`; μ wird analytisch und τ auf einem ausreichend feinen Raster numerisch integriert. Standard-Priors σμ = 5 und στ = 2 ISI-Punkte; Prior-Sensitivität über die Oberfläche.
-- **Illustrative Relevanzschwelle:** MD < −2 ISI-Punkte. **Keine validierte MCID-Schwelle.**
+1. Add a large null-effect trial.
+2. Change the sample size without changing the study effect.
+3. Correct the data in an existing trial.
 
-Die Analyse-Implementierung (`src/analysis.py`) ist offen, testbar und unabhängig von Streamlit. Die Tests sichern die Ergebnisse gegen feste Referenzwerte. Eine externe Kreuzvalidierung gegen `metafor::rma(..., method="REML", test="adhoc")` ist für wissenschaftlichen Einsatz zusätzlich empfehlenswert.
+These changes are session-local: they do not modify the canonical CSV files or the historical review versions.
 
-**Achtung:** Wiederholte frequentistische Konfidenzintervalle über zeitlich wiederkehrende Updates sind *keine* automatisch sequenziell adjustierte Inferenz. Die Demo ist kein formales Trial-Sequential-Analysis-Verfahren. Auch bayesianisches Updating beseitigt keinen Publikations- oder Selektionsbias.
+### 03 · Frequentist vs. Bayesian
 
-## Projektstruktur
+Use **the same study data** for both approaches and compare their interpretation of uncertainty.
+
+- **Frequentist:** REML random-effects meta-analysis and modified Hartung–Knapp 95% confidence intervals.
+- **Bayesian:** a hierarchical normal–normal model with adjustable priors for the pooled effect and heterogeneity, 95% credible intervals, and probabilities of a benefit or of exceeding an illustrative effect threshold.
+
+The page explains priors, posterior distributions, the difference between confidence and credible intervals, and how results evolve over versions. Old studies are **not counted twice**: every Bayesian snapshot uses the original prior and the full valid evidence available at that time.
+
+### 04 · Workflow & Data
+
+Explore the steps of a living review—surveillance, screening, extraction and quality assurance, reanalysis, and publication. Review the synthetic event log and export versioned datasets, event records, and pooled estimates.
+
+## Suggested guided tour
+
+1. Open **Living Review**. Read the fictional case and start at **V0**. Move to V1–V4 and watch how effects, precision, and heterogeneity change, especially after the correction in V4.
+2. Open **Experiment Lab**. Follow the three suggested experiments, starting with a large study reporting no effect.
+3. Open **Frequentist vs. Bayesian**. Adjust one prior at a time. Compare the meaning of the 95% CI, 95% credible interval, and the probability `P(μ < −2)`.
+4. Open **Workflow & Data**. Check which simulated events triggered reanalysis or a new published version.
+
+## Fictional review versions
+
+| Version | Year | Studies | Narrative |
+| --- | --- | ---: | --- |
+| V0 | 2024 | 4 | Initial review: promising but uncertain effect |
+| V1 | 2025 | 6 | A large, favourable RCT strengthens the pooled result |
+| V2 | 2026 | 9 | Three large trials report smaller or opposing effects |
+| V3 | 2027 | 13 | Additional evidence, with substantial heterogeneity |
+| V4 | 2027 | 13 | Correction of the eight-week endpoint of S06, with no new study |
+
+`data/studies.csv` contains the original values and separately stored revised values. `src/data.py` applies the S06 correction **only from V4 onward**, preserving reproducible historical snapshots.
+
+## Analysis methods
+
+- **Outcome:** ISI at eight weeks, with lower scores indicating fewer insomnia symptoms.
+- **Effect:** raw mean difference, `mean_int − mean_ctrl`, in ISI points.
+- **Within-study variance:** `sd_int²/n_int + sd_ctrl²/n_ctrl`.
+- **Frequentist model:** normal–normal random effects; between-study variance `τ²` estimated using REML. The modified Hartung–Knapp interval uses `max(1, Q_RE/(k−1))` for variance inflation and the `t(k−1)` quantile. `I²` is calculated from Cochran's Q.
+- **Bayesian model:** `y_i | μ, τ ~ Normal(μ, v_i + τ²)`; `μ ~ Normal(0, σμ²)`, and `τ ~ HalfNormal(στ)`. The posterior integrates analytically over `μ` and numerically over `τ` on a fine grid. Defaults: `σμ = 5` and `στ = 2` ISI points.
+- **Illustrative threshold:** `MD < −2` ISI points. **This is not a validated minimal clinically important difference (MCID).**
+
+The statistical engine in `src/analysis.py` is independent of Streamlit and is covered by automated regression tests. An optional R script, `validation/metafor_crosscheck.R`, supports external verification of the frequentist estimates with `metafor`.
+
+**Methodological caveats:** Repeated confidence intervals shown after successive updates are not automatically valid sequential frequentist inference. Bayesian updating does not remove publication bias, selection bias, or model misspecification. These simulations are not intended for making real clinical decisions.
+
+## Repository structure
 
 ```text
-app.py                   Streamlit-Oberfläche
-src/analysis.py          Frequentistische und bayesianische Statistik
-src/data.py              Snapshot- und Datenlogik
-src/plots.py             Interaktive Plotly-Abbildungen
-src/explanations.py      Didaktische Texte zu Versionen und Laborübungen
-data/studies.csv         13 synthetische Studien + S06-Korrektur
-data/events.csv          Ereignisprotokoll der Living-Review-Updates
-tests/test_analysis.py   Regressions-, Revisions- und Plausibilitätstests
-requirements.txt         Laufzeitabhängigkeiten
-requirements-dev.txt     Testabhängigkeiten
-.streamlit/config.toml   Darstellung
+app.py                       Streamlit entry point and navigation
+data/studies.csv             Versioned fictional trial data
+data/events.csv              Monitoring and review update event log
+src/data.py                  Historical review snapshots
+src/analysis.py              Frequentist and Bayesian models
+src/plots.py                 Forest, history, and posterior charts
+src/explanations.py          Educational guidance and laboratory exercises
+tests/                       Automated regression and guidance tests
+validation/                  Optional R/metafor comparison
+requirements.txt             Application dependencies
+requirements-dev.txt         Test dependencies
+.github/workflows/tests.yml  Continuous integration
 ```
 
-Tests ausführen:
+Run the tests:
 
 ```bash
 python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-## In Streamlit Community Cloud bereitstellen
+## Deploy on Streamlit Community Cloud
 
-1. Repository auf GitHub erstellen und diese Dateien auf den Default-Branch übertragen.
-2. Auf [share.streamlit.io](https://share.streamlit.io) mit GitHub anmelden.
-3. **Deploy an app**: Repository auswählen, Branch `main`, Main file path `app.py`.
-4. Deploy. Es sind keine Secrets nötig.
+Choose **Deploy an app**, select repository `RobinSegerer/somnitech-living-review`, branch `main`, and set **Main file path** to `app.py`. No secrets are required. Streamlit will install the packages listed in `requirements.txt`.
 
-Für die unkomplizierte öffentliche Demonstration eignet sich ein öffentliches Repository. Bei privaten Repositories hängen Freigabe und Zugriff von den GitHub-/Streamlit-Einstellungen ab.
+## License
 
-## Lizenz
-
-MIT. Didaktisches, rein synthetisches Beispiel.
-
-## GitHub-Upload mit einem Befehl (optional)
-
-Wenn GitHub CLI (`gh`) auf dem Rechner installiert und mittels `gh auth login` verbunden ist, kann das beiliegende Skript ein **eigenes Repository** erstellen und die Dateien pushen:
-
-```bash
-bash publish_to_github.sh private
-```
-
-Für eine öffentlich sichtbare Demo stattdessen `bash publish_to_github.sh public`. Das Skript benötigt eine konfigurierte lokale Git-Identität (`git config --global user.name` und `user.email`). Es verändert **keines** der bereits bestehenden GitHub-Repositories.
-
-Ein zusätzliches R-Skript unter `validation/metafor_crosscheck.R` kann die frequentistischen Resultate unabhängig mit `metafor` prüfen; die Ausführung dieses optionalen Skripts ist nicht Voraussetzung für Streamlit.
+MIT License. See [LICENSE](LICENSE).
