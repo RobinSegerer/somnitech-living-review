@@ -224,4 +224,4 @@ def bayesian_density(frame: pd.DataFrame, mu_prior_sd=5.0, tau_prior_sd=2.0,
                     logsumexp(logev + logprior + np.log(endweights)))
     x = np.linspace(x_min, x_max, points)
     density = np.sum(weight[:, None] * norm.pdf(x[None, :], mus[:, None], sigmas[:, None]), axis=0)
-    return pd.DataFrame({"MD": x, "Posterior-Dichte": density})
+    return pd.DataFrame({"MD": x, "Posterior density": density})
