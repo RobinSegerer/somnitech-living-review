@@ -211,49 +211,49 @@ with section_review:
         lower_fit = fit_random_effects(lowrisk)
         a,b = st.columns(2)
         a.metric("Low risk of bias only", f"{lower_fit.mean:+.2f}",
-                 help=f"{len(lowrisk)} von {len(frame)} Studien.")
+                 help=f"{len(lowrisk)} von {len(frame)} studies.")
         b.metric("95% CI for this subset", f"[{lower_fit.ci_low:+.2f}; {lower_fit.ci_high:+.2f}]")
         st.caption("Exploratory sensitivity analysis only. No automatic GRADE certainty assessment; individual RoB 2 domains are not simulated.")
     else:
         st.caption("Fewer than two studies are classified as low risk of bias in this version.")
 
 with section_lab:
-    st.subheader("Experimentierlabor · Wie beeinflussen einzelne Studien die Synthese?")
+    st.subheader("Experiment Lab · How do individual studies affect the synthesis?")
     st.write(
-        "Hier kannst du die Metaanalyse selbst verändern. Du arbeitest mit den "
-        f"**{fit.k} Studien aus {version}** als Startpunkt. Das Labor ist eine "
-        "**Was-wäre-wenn-Simulation**: Es verändert keine publizierten "
+        "Here you can change the meta-analysis yourself. Begin with the "
+        f"**{fit.k} studies in {version}** as your starting point. This is a "
+        "**what-if simulation**: it does not change published "
         "Originaldaten und legt keine neuen Review versionen an."
     )
-    st.markdown("**Was kannst du ausprobieren?**")
+    st.markdown("**What can you try?**")
     st.markdown(
-        "1. **Eine Studie bearbeiten:** Verändere beispielsweise einen "
-        "Gruppenmittelwert, die Standardabweichung oder die Stichprobengrösse. "
-        "Klicke anschliessend auf **‚Änderungen übernehmen und neu berechnen‘**.\n"
-        "2. **Eine neue Studie hinzufügen:** Öffne das Eingabeformular unter "
-        "der Tabelle, gib Daten für beide Gruppen ein und klicke auf "
-        "**‚Studie einschliessen‘**.\n"
-        "3. **Ergebnisse vergleichen:** Rechts siehst du die neue gepoolte "
-        "MD, I² und den Forest Plot. Die angezeigte Veränderung bezieht sich "
-        "auf die unveränderte Originalversion.\n"
-        "4. **Zurücksetzen oder exportieren:** Mit dem Zurücksetzen-Button "
-        "beginnst du neu; als CSV lassen sich die experimentellen "
-        "Studiendaten herunterladen."
+        "1. **Edit a study:** Change an intervention or control "
+        "group mean, standard deviation, or sample size. "
+        "Then select **Apply changes and recalculate**.\n"
+        "2. **Add a new study:** Open the entry form below "
+        "the table, enter data for both arms, and select "
+        "**Add study**.\n"
+        "3. **Compare results:** The right-hand panel shows the new pooled "
+        "MD, I², and forest plot. Changes are measured "
+        "against the unmodified review version.\n"
+        "4. **Reset or export:** Use the reset button "
+        "to start again; download your experimental "
+        "study data as a CSV file."
     )
-    with st.expander("Drei angeleitete Experimente zum Ausprobieren"):
+    with st.expander("Three guided experiments to try"):
         for title, description in LAB_EXPERIMENTS:
             st.markdown(f"**{title}**")
             st.markdown(description)
     st.info(
-        "**Denkfrage:** Was beeinflusst den gepoolten Effekt stärker – "
-        "die Richtung einer Studie, ihre Stichprobengrösse oder die "
-        "Unterschiede zwischen allen Studien? Probiere die Varianten "
-        "nacheinander aus."
+        "**Think about it:** What influences the pooled effect more – "
+        "a study's effect direction, its sample size, or the "
+        "differences across studies? Try the changes "
+        "one at a time."
     )
     st.caption(
-        "Die Änderungen gelten nur für diese Browsersitzung und die gewählte "
-        "Version. Ein Wechsel von V0–V4 in der Seitenleiste startet das Labor "
-        "für die neue Version erneut."
+        "Changes apply only to the current browser session and selected "
+        "version. Switching between V0–V4 in the sidebar starts "
+        "the lab afresh for that version."
     )
     if "exp_baseline" not in st.session_state or st.session_state.exp_baseline != version:
         st.session_state.exp_baseline = version
@@ -262,7 +262,7 @@ with section_lab:
 
     left, right = st.columns([1.4, 1.0], gap="large")
     with left:
-        st.markdown("**Bestehende Studien bearbeiten**")
+        st.markdown("**Edit existing studies**")
         exp_cols = ["study_id", "author_year", "n_int", "mean_int", "sd_int",
                     "n_ctrl", "mean_ctrl", "sd_ctrl", "rob"]
         with st.form(f"editor_{st.session_state.editor_revision}"):
@@ -272,18 +272,18 @@ with section_lab:
                 disabled=["study_id", "author_year"],
                 column_config={
                     "study_id": st.column_config.TextColumn("ID"),
-                    "author_year": st.column_config.TextColumn("Studie"),
+                    "author_year": st.column_config.TextColumn("Study"),
                     "n_int": st.column_config.NumberColumn("n Int.", min_value=2, step=1, format="%d"),
-                    "n_ctrl": st.column_config.NumberColumn("n Kontr.", min_value=2, step=1, format="%d"),
-                    "mean_int": st.column_config.NumberColumn("MW Int.", format="%.2f"),
-                    "mean_ctrl": st.column_config.NumberColumn("MW Kontr.", format="%.2f"),
+                    "n_ctrl": st.column_config.NumberColumn("n Control", min_value=2, step=1, format="%d"),
+                    "mean_int": st.column_config.NumberColumn("Mean Int.", format="%.2f"),
+                    "mean_ctrl": st.column_config.NumberColumn("Mean Control", format="%.2f"),
                     "sd_int": st.column_config.NumberColumn("SD Int.", min_value=0.01, format="%.2f"),
-                    "sd_ctrl": st.column_config.NumberColumn("SD Kontr.", min_value=0.01, format="%.2f"),
+                    "sd_ctrl": st.column_config.NumberColumn("SD Control", min_value=0.01, format="%.2f"),
                     "rob": st.column_config.SelectboxColumn("Risk of Bias", options=["Low", "Some concerns", "High"]),
                 },
                 key=f"editor_key_{st.session_state.editor_revision}",
             )
-            saved = st.form_submit_button("Änderungen übernehmen und neu berechnen", type="primary")
+            saved = st.form_submit_button("Apply changes and recalculate", type="primary")
         if saved:
             try:
                 validate_studies(edited)
@@ -294,28 +294,28 @@ with section_lab:
                     for col in exp_cols:
                         current.at[sid, col] = row[col]
                 st.session_state.exp_frame = current.reset_index()
-                st.success("Die experimentelle Metaanalyse wurde aktualisiert.")
+                st.success("The experimental meta-analysis has been updated.")
             except (ValueError, TypeError) as exc:
-                st.error(f"Ungültige Studiendaten: {exc}")
-        if st.button("Experiment auf Originalversion zurücksetzen"):
+                st.error(f"Invalid study data: {exc}")
+        if st.button("Reset experiment to original version"):
             st.session_state.exp_frame = snapshot(version)
             st.session_state.editor_revision += 1
             st.rerun()
 
-        with st.expander("Neue synthetische Studie hinzufügen"):
+        with st.expander("Add a new synthetic study"):
             with st.form("add_exp_study"):
-                study_name = st.text_input("Studienbezeichnung", value="Neue Studie (Simulation)")
+                study_name = st.text_input("Study label", value="New study (simulation)")
                 n1, n2 = st.columns(2)
                 n_int = n1.number_input("N Intervention", min_value=2, value=200, step=10)
-                n_ctrl = n2.number_input("N Kontrolle", min_value=2, value=200, step=10)
+                n_ctrl = n2.number_input("N control", min_value=2, value=200, step=10)
                 x1, x2 = st.columns(2)
-                mean_int = x1.number_input("ISI-Mittelwert Intervention", value=11.0, step=.1)
-                mean_ctrl = x2.number_input("ISI-Mittelwert Kontrolle", value=12.0, step=.1)
+                mean_int = x1.number_input("Mean ISI, intervention", value=11.0, step=.1)
+                mean_ctrl = x2.number_input("Mean ISI, control", value=12.0, step=.1)
                 x3, x4 = st.columns(2)
                 sd_int = x3.number_input("SD Intervention", min_value=.01, value=4.0, step=.1)
-                sd_ctrl = x4.number_input("SD Kontrolle", min_value=.01, value=4.0, step=.1)
+                sd_ctrl = x4.number_input("SD control", min_value=.01, value=4.0, step=.1)
                 rob = st.selectbox("Risk of Bias", ["Low", "Some concerns", "High"])
-                submitted = st.form_submit_button("Studie einschliessen")
+                submitted = st.form_submit_button("Add study")
             if submitted:
                 existing = st.session_state.exp_frame
                 suffix = 1
@@ -338,37 +338,37 @@ with section_lab:
         try:
             experiment = validate_studies(st.session_state.exp_frame)
             result = fit_random_effects(experiment)
-            st.markdown("**Neuberechnetes Ergebnis**")
+            st.markdown("**Recalculated results**")
             st.caption(
-                f"Vergleich mit {version}: Die Ausgangsschätzung beträgt "
-                f"{fit.mean:+.2f} ISI-Punkte; die Anzeige darunter verwendet "
-                "ausschliesslich deine experimentellen Daten."
+                f"Comparison with {version}: The baseline estimate is "
+                f"{fit.mean:+.2f} ISI points; the analysis below uses "
+                "only your experimental data."
             )
             a,b=st.columns(2)
-            a.metric("MD experimentell", f"{result.mean:+.2f}",
+            a.metric("Experimental MD", f"{result.mean:+.2f}",
                      delta=f"{result.mean-fit.mean:+.2f} vs. {version}", delta_color="off")
             b.metric("I²", f"{result.i2:.1f} %")
-            st.write(f"95%-KI **[{result.ci_low:+.2f}; {result.ci_high:+.2f}]** · {result.k} Studien")
+            st.write(f"95% CI **[{result.ci_low:+.2f}; {result.ci_high:+.2f}]** · {result.k} studies")
             st.caption(
-                "Die Delta-Anzeige zeigt **neue MD minus ursprüngliche MD**. "
-                "Ein positiver Wert bedeutet eine Verschiebung Richtung weniger "
-                "negativer Effekte; ein negativer Wert eine Verschiebung zu "
-                "stärker negativem Effekt."
+                "The delta indicator is **new MD minus original MD**. "
+                "A positive value indicates a shift towards a less "
+                "negative effect; a negative delta indicates a shift towards "
+                "a more negative effect."
             )
-            st.plotly_chart(forest_plot(experiment, result, title="Experimenteller Forest Plot"),
+            st.plotly_chart(forest_plot(experiment, result, title="Experimental forest plot"),
                             width="stretch", key="experimental_forest")
             out = calculate_effects(experiment)
-            st.download_button("Experimentelle Studiendaten als CSV",
+            st.download_button("Experimentelle studiesdaten als CSV",
                                data=out.to_csv(index=False).encode("utf-8-sig"),
                                file_name="somnitech_experiment.csv", mime="text/csv")
         except ValueError as exc:
-            st.error(f"Keine Analyse möglich: {exc}")
-    st.caption("Das Experimentierlabor simuliert Veränderungen der Aggregatdaten, nicht die Generierung einzelner Patientendaten.")
+            st.error(f"Unable to calculate meta-analysis: {exc}")
+    st.caption("The experiment lab modifies aggregate study data; it does not simulate individual participant records.")
 
 with section_methods:
     st.subheader("Frequentistisch vs. bayesianisch · Was sagen die Ergebnisse aus?")
     st.write(
-        f"Beide Analysen verwenden **dieselben {fit.k} synthetischen Studien "
+        f"Beide Analysen verwenden **dieselben {fit.k} synthetischen studies "
         f"aus {version}** und ein Random-Effects-Modell. "
         "Sie beantworten verwandte Fragen, aber die Unsicherheit wird "
         "unterschiedlich ausgedrückt. Wechsle links die Review version und "
@@ -389,7 +389,7 @@ with section_methods:
         st.markdown("**Bayesianische Perspektive**")
         st.write(
             "Wir legen vor der Analyse **Priors** für den Gesamteffekt (μ) "
-            "und die Heterogenität (τ) fest. Zusammen mit den Studiendaten "
+            "und die Heterogenität (τ) fest. Zusammen mit den studiesdaten "
             "entsteht eine **Posteriorverteilung**. Ein 95%-" 
             "**Kredibilitätsintervall** enthält unter Modell und Priors "
             "95 % der posterioren Wahrscheinlichkeit für μ."
@@ -399,7 +399,7 @@ with section_methods:
         "mit dem aktuellen Datenstand erneut geschätzt. Bayesianisch aktualisieren "
         "die Daten die vorherigen Annahmen. In dieser App wird für jede "
         "Version derselbe ursprüngliche Prior mit dem vollständigen gültigen "
-        "Datensatz kombiniert – alte Studien werden dadurch nicht doppelt gezählt."
+        "Datensatz kombiniert – alte studies werden dadurch nicht doppelt gezählt."
     )
     st.markdown("#### 1 · Priors festlegen")
     st.write(
@@ -414,11 +414,11 @@ with section_methods:
                                            help="μ ist die wahre durchschnittliche MD. Ein Prior Normal(0, 5²) lässt stärkere Abweichungen von Null eher zu als Normal(0, 1²).")
     tau_prior_sd = col_prior2.select_slider("Prior-Standardabweichung für τ (Half-Normal(SD))",
                                             options=[0.5, 1.0, 2.0, 4.0], value=2.0,
-                                            help="τ beschreibt die Streuung der wahren Studieneffekte (ISI-Punkte). Eine Half-Normal-Verteilung erlaubt nur τ ≥ 0.")
+                                            help="τ beschreibt die Streuung der wahren studieseffekte (ISI-Punkte). Eine Half-Normal-Verteilung erlaubt nur τ ≥ 0.")
     st.caption(
         f"Aktuell: μ ~ Normal(0, {mu_prior_sd:g}²); "
         f"τ ~ Half-Normal({tau_prior_sd:g}). "
-        "Die Priors gewichten keine einzelnen Studien nach ihrer Qualität."
+        "Die Priors gewichten keine einzelnen studies nach ihrer Qualität."
     )
     st.markdown("#### 2 · Schätzungen und Intervalle vergleichen")
     bayes = fit_bayesian(frame, threshold=threshold,
@@ -501,7 +501,7 @@ with section_methods:
     with st.expander("Statistisches Modell und Einschränkungen"):
         st.latex(r"y_i\mid \mu,\tau \sim \mathcal{N}(\mu,\,v_i+\tau^2)")
         st.latex(r"\mu \sim \mathcal{N}(0,\sigma_{\mu}^2),\quad \tau\sim\operatorname{HalfNormal}(\sigma_{\tau})")
-        st.write("Der bayesianische Posterior wird ohne MCMC durch analytische Integration über μ und numerische Integration über τ berechnet. Die modellierten Studien sind unabhängig, und die berichteten Stichprobenvarianzen werden als bekannt behandelt.")
+        st.write("Der bayesianische Posterior wird ohne MCMC durch analytische Integration über μ und numerische Integration über τ berechnet. Die modellierten studies sind unabhängig, und die berichteten Stichprobenvarianzen werden als bekannt behandelt.")
         st.write("Die festgelegte Schwelle von zwei ISI-Punkten ist rein didaktisch. Weder ein grosses Posterior-P noch ein p-Wert kann unzureichende interne Validität, Publikationsbias oder Modellfehlanpassung ausgleichen.")
 
 with section_workflow:
@@ -520,7 +520,7 @@ with section_workflow:
     st.dataframe(events.rename(columns={"version":"Version", "event_date":"Datum",
                                              "event_type":"Ereignis", "study_id":"Studie", "details":"Beschreibung"}),
                  hide_index=True, width="stretch")
-    st.markdown("**Studiendaten dieses Snapshots**")
+    st.markdown("**studiesdaten dieses Snapshots**")
     st.dataframe(effects[["study_id", "author_year", "n_int", "n_ctrl", "mean_int",
                           "mean_ctrl", "sd_int", "sd_ctrl", "yi", "vi", "rob"]],
                  hide_index=True, width="stretch")
