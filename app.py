@@ -1,8 +1,6 @@
 """SomniTech Living Evidence Lab — fictional, interactive Streamlit demonstration."""
 from __future__ import annotations
 
-import io
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -12,8 +10,9 @@ from src.analysis import (
     bayesian_density, calculate_effects, fit_bayesian,
     fit_random_effects, validate_studies,
 )
-from src.data import VERSION_METADATA, VERSIONS, load_events, load_studies, snapshot
-from src.plots import BLUE, GREEN, ORANGE, forest_plot, history_plot, posterior_plot
+from src.data import VERSION_METADATA, VERSIONS, load_events, snapshot
+from src.explanations import LAB_EXPERIMENTS, VERSION_GUIDE
+from src.plots import BLUE, forest_plot, history_plot, posterior_plot
 
 st.set_page_config(
     page_title="SomniTech | Living Evidence Lab",
@@ -76,19 +75,86 @@ section_review, section_lab, section_methods, section_workflow = st.tabs([
 ])
 
 with section_review:
+    st.subheader("Der fiktive Fall: Wirksamkeit der Schlaf-App SomniTech")
+    st.write(
+        "Ein Forschungsteam möchte wissen, ob eine **fiktive digitale Schlafintervention** "
+        "bei Erwachsenen mit Insomnie besser wirkt als eine allgemeine "
+        "**Schlafhygiene-Beratung**. Der Review berücksichtigt ausschliesslich "
+        "randomisierte kontrollierte Studien (RCTs). Im Laufe der Zeit erscheinen "
+        "neue Studien; ausserdem wird später eine fehlerhafte Datenextraktion korrigiert. "
+        "Du verfolgst, wie sich dadurch das Wissen verändert."
+    )
+    st.markdown("**Die Forschungsfrage (PICO)**")
+    p1, p2 = st.columns(2, gap="large")
+    with p1:
+        st.markdown("**P – Population:** Erwachsene mit Insomnie  \n**I – Intervention:** digitale App *SomniTech*")
+    with p2:
+        st.markdown("**C – Vergleich:** allgemeine Schlafhygiene-Beratung  \n**O – Outcome:** Insomnia Severity Index (ISI) nach acht Wochen")
+    st.markdown(
+        "**Was wird verglichen?** Der ISI umfasst 0–28 Punkte; niedrigere Werte "
+        "bedeuten weniger Insomniesymptome. Wir analysieren die **Mittelwertdifferenz "
+        "der ISI-Endwerte nach acht Wochen** (Intervention minus Kontrolle), "
+        "nicht individuelle Veränderungen seit Studienbeginn. "
+        "Eine MD von **−2** bedeutet beispielsweise, dass die Interventionsgruppe "
+        "im Durchschnitt zwei ISI-Punkte niedriger liegt. Die hier einstellbare "
+        "Schwelle von −2 ist nur eine **didaktische Annahme**, keine validierte "
+        "Grenze klinisch relevanter Veränderungen."
+    )
+    st.info(
+        "**So gehst du vor:** Wähle links zuerst **V0** und betrachte den Forest Plot. "
+        "Wechsle dann zu **V1–V4**: Was passiert mit der Gesamtschätzung, "
+        "dem Konfidenzintervall und der Heterogenität? Die orangefarbenen Studien "
+        "sind neu hinzugekommen. Mit der Schwelle in der Seitenleiste kannst du "
+        "eine angenommene klinische Relevanzgrenze verschieben."
+    )
+    with st.expander("Warum ist das ein *Living* Review und nicht nur eine Metaanalyse?"):
+        st.write(
+            "Die initiale Suche bildet V0. Danach werden neu erschienene Studien "
+            "durch regelmässige Suchläufe und Alerts entdeckt, gescreent, geprüft "
+            "und in die Analyse aufgenommen. Jede Version bewahrt einen eigenen "
+            "Datenstand. V4 demonstriert, dass auch **Korrekturen alter Daten** "
+            "eine Reanalyse auslösen können. Ein Suchlauf ohne neue Studien "
+            "führt hingegen nicht zwingend zu einer neuen Publikation."
+        )
+    st.divider()
     st.subheader("Evidenzstand · " + version)
+    guide = VERSION_GUIDE[version]
+    st.markdown(f"**Leitfrage: {guide['question']}**")
+    st.caption("Die folgenden Zahlen beziehen sich nur auf den ausgewählten, fiktiven Datenstand.")
     a,b,c,d = st.columns(4)
     a.metric("Studien", f"{fit.k}")
     b.metric("Teilnehmende", f"{fit.n_total:,}".replace(",", "’"))
     c.metric("Gepoolte MD", f"{fit.mean:+.2f}")
     d.metric("I² (Q-basiert)", f"{fit.i2:.1f} %")
     st.caption(f"95%-Konfidenzintervall: [{fit.ci_low:+.2f}; {fit.ci_high:+.2f}] ISI-Punkte · τ² = {fit.tau2:.3f} · Q-p = {fit.q_pvalue:.3g}")
+    st.markdown(
+        "**Zahlen lesen:** Die **MD** ist der durchschnittliche Unterschied "
+        "zwischen den Gruppen (negativ = günstiger für SomniTech). Das "
+        "**95%-KI** quantifiziert die statistische Unsicherheit. "
+        "**I²** beschreibt den Anteil beobachteter Variabilität der "
+        "Studieneffekte, der über die Stichprobenstreuung hinausgeht "
+        "(Q-basiert); es ist **kein Qualitätswert**."
+    )
 
     col_forest, col_side = st.columns([2.25, 1.0], gap="large")
     with col_forest:
         st.plotly_chart(forest_plot(frame, fit, title=f"Forest Plot · {version}",
                                     highlight_phase=int(version[-1]) if version in ("V1", "V2", "V3") else None),
                         width="stretch", key=f"forest_{version}")
+        with st.expander("Lesehilfe: Was bedeuten Quadrate, Linien und Diamond?"):
+            st.markdown(
+                "- **Quadrat:** geschätzte Mittelwertdifferenz einer Studie; "
+                "grössere Quadrate zeigen ein höheres *Random-Effects-Gewicht* an.\n"
+                "- **Horizontale Linie:** 95%-Konfidenzintervall dieser Studie.\n"
+                "- **Grüner Diamond unten:** gepoolte Mittelwertdifferenz; seine "
+                "Breite steht für das 95%-KI des Gesamteffekts.\n"
+                "- **Gestrichelte Linie bei 0:** kein durchschnittlicher Unterschied "
+                "zwischen Intervention und Kontrolle.\n"
+                "- **Orange:** in V1–V3 neu eingeschlossene Studien. V4 korrigiert "
+                "dagegen die bereits vorhandene Studie S06.\n\n"
+                "**Maus-Tipp:** Fahre über ein Quadrat, um die einzelne MD, "
+                "ihr Konfidenzintervall und das Gewicht zu sehen."
+            )
     with col_side:
         st.markdown("#### Was hat sich geändert?")
         st.info(meta["description"])
@@ -98,7 +164,11 @@ with section_review:
             st.metric("Veränderung der MD", f"{fit.mean - prev['mean']:+.2f}",
                       help=f"Aktueller Effekt minus Effekt in {prev_name}.")
             st.metric("Veränderung der Studienzahl", f"{fit.k-int(prev['k']):+d}")
-        st.write("**Interpretation**")
+        st.write("**Was zeigt diese Version?**")
+        st.write(guide["observation"])
+        st.write("**Worauf solltest du achten?**")
+        st.caption(guide["try_this"])
+        st.write("**Statistische Einordnung**")
         if fit.ci_high < 0:
             st.success("Das 95%-KI liegt unter Null. Im gewählten Modell ist die mittlere MD statistisch von Null unterscheidbar.")
         else:
@@ -110,6 +180,17 @@ with section_review:
     st.markdown("#### Wie hat sich die Evidenz verändert?")
     st.plotly_chart(history_plot(history, selected=version, threshold=threshold),
                     width="stretch", key="history_plot")
+    st.caption(
+        "Jede Zeile zeigt den Gesamteffekt einer eigenen Review-Version mit "
+        "95%-KI. Die gestrichelte Nulllinie steht für keinen Unterschied; "
+        "die gepunktete Linie markiert die links festgelegte didaktische "
+        "Relevanzschwelle. Die aktuell gewählte Version ist orange hervorgehoben."
+    )
+    st.info(
+        "**Merke:** Eine spätere Version kann die frühere Schlussfolgerung "
+        "bestätigen, abschwächen oder umkehren. Die wiederholten "
+        "Konfidenzintervalle sind hier nicht für sequenzielles Testen adjustiert."
+    )
     table_hist = history.copy()
     table_hist["95%-KI"] = table_hist.apply(lambda r:f"[{r.ci_low:.2f}; {r.ci_high:.2f}]", axis=1)
     table_hist["MD"] = table_hist["mean"].round(2)
@@ -118,6 +199,13 @@ with section_review:
                  hide_index=True, width="stretch")
 
     st.markdown("#### Risk-of-Bias-Sensitivität")
+    st.write(
+        "Nicht jede Studie ist methodisch gleich vertrauenswürdig. Hier wird "
+        "die Metaanalyse versuchsweise nur mit Studien gerechnet, die im "
+        "**simulierten RoB-Label ‚Low‘** tragen. Vergleiche das Ergebnis mit "
+        "der Gesamtanalyse. Dies ist eine vereinfachte Sensitivitätsanalyse, "
+        "keine vollständige RoB-2- oder GRADE-Bewertung."
+    )
     lowrisk = frame.loc[frame["rob"].eq("Low")].copy()
     if len(lowrisk) >= 2:
         lower_fit = fit_random_effects(lowrisk)
@@ -130,8 +218,43 @@ with section_review:
         st.caption("Für diese Version sind weniger als zwei Studien mit niedrigem Risk of Bias vorhanden.")
 
 with section_lab:
-    st.subheader("Experimentierlabor")
-    st.write("Verändere Gruppenmittelwerte, Standardabweichungen und Stichprobengrössen. Die Originaldaten bleiben unverändert; Änderungen gelten nur für diese Browsersitzung.")
+    st.subheader("Experimentierlabor · Wie beeinflussen einzelne Studien die Synthese?")
+    st.write(
+        "Hier kannst du die Metaanalyse selbst verändern. Du arbeitest mit den "
+        f"**{fit.k} Studien aus {version}** als Startpunkt. Das Labor ist eine "
+        "**Was-wäre-wenn-Simulation**: Es verändert keine publizierten "
+        "Originaldaten und legt keine neuen Review-Versionen an."
+    )
+    st.markdown("**Was kannst du ausprobieren?**")
+    st.markdown(
+        "1. **Eine Studie bearbeiten:** Verändere beispielsweise einen "
+        "Gruppenmittelwert, die Standardabweichung oder die Stichprobengrösse. "
+        "Klicke anschliessend auf **‚Änderungen übernehmen und neu berechnen‘**.\n"
+        "2. **Eine neue Studie hinzufügen:** Öffne das Eingabeformular unter "
+        "der Tabelle, gib Daten für beide Gruppen ein und klicke auf "
+        "**‚Studie einschliessen‘**.\n"
+        "3. **Ergebnisse vergleichen:** Rechts siehst du die neue gepoolte "
+        "MD, I² und den Forest Plot. Die angezeigte Veränderung bezieht sich "
+        "auf die unveränderte Originalversion.\n"
+        "4. **Zurücksetzen oder exportieren:** Mit dem Zurücksetzen-Button "
+        "beginnst du neu; als CSV lassen sich die experimentellen "
+        "Studiendaten herunterladen."
+    )
+    with st.expander("Drei angeleitete Experimente zum Ausprobieren"):
+        for title, description in LAB_EXPERIMENTS:
+            st.markdown(f"**{title}**")
+            st.markdown(description)
+    st.info(
+        "**Denkfrage:** Was beeinflusst den gepoolten Effekt stärker – "
+        "die Richtung einer Studie, ihre Stichprobengrösse oder die "
+        "Unterschiede zwischen allen Studien? Probiere die Varianten "
+        "nacheinander aus."
+    )
+    st.caption(
+        "Die Änderungen gelten nur für diese Browsersitzung und die gewählte "
+        "Version. Ein Wechsel von V0–V4 in der Seitenleiste startet das Labor "
+        "für die neue Version erneut."
+    )
     if "exp_baseline" not in st.session_state or st.session_state.exp_baseline != version:
         st.session_state.exp_baseline = version
         st.session_state.exp_frame = snapshot(version)
@@ -216,11 +339,22 @@ with section_lab:
             experiment = validate_studies(st.session_state.exp_frame)
             result = fit_random_effects(experiment)
             st.markdown("**Neuberechnetes Ergebnis**")
+            st.caption(
+                f"Vergleich mit {version}: Die Ausgangsschätzung beträgt "
+                f"{fit.mean:+.2f} ISI-Punkte; die Anzeige darunter verwendet "
+                "ausschliesslich deine experimentellen Daten."
+            )
             a,b=st.columns(2)
             a.metric("MD experimentell", f"{result.mean:+.2f}",
                      delta=f"{result.mean-fit.mean:+.2f} vs. {version}", delta_color="off")
             b.metric("I²", f"{result.i2:.1f} %")
             st.write(f"95%-KI **[{result.ci_low:+.2f}; {result.ci_high:+.2f}]** · {result.k} Studien")
+            st.caption(
+                "Die Delta-Anzeige zeigt **neue MD minus ursprüngliche MD**. "
+                "Ein positiver Wert bedeutet eine Verschiebung Richtung weniger "
+                "negativer Effekte; ein negativer Wert eine Verschiebung zu "
+                "stärker negativem Effekt."
+            )
             st.plotly_chart(forest_plot(experiment, result, title="Experimenteller Forest Plot"),
                             width="stretch", key="experimental_forest")
             out = calculate_effects(experiment)
@@ -232,13 +366,61 @@ with section_lab:
     st.caption("Das Experimentierlabor simuliert Veränderungen der Aggregatdaten, nicht die Generierung einzelner Patientendaten.")
 
 with section_methods:
-    st.subheader("Frequentistisch und bayesianisch: dieselbe Evidenz, andere Aussagen")
-    st.markdown("Das frequentistische Modell bleibt über die Versionen unverändert. Für die bayesianische Analyse werden die Priors bewusst **vorab** spezifiziert und bei jedem Snapshot erneut auf die jeweils vollständigen Daten angewendet.")
+    st.subheader("Frequentistisch vs. bayesianisch · Was sagen die Ergebnisse aus?")
+    st.write(
+        f"Beide Analysen verwenden **dieselben {fit.k} synthetischen Studien "
+        f"aus {version}** und ein Random-Effects-Modell. "
+        "Sie beantworten verwandte Fragen, aber die Unsicherheit wird "
+        "unterschiedlich ausgedrückt. Wechsle links die Review-Version und "
+        "beobachte, wie sich beide Ergebnisse mit neuer Evidenz verändern."
+    )
+    concept_f, concept_b = st.columns(2, gap="large")
+    with concept_f:
+        st.markdown("**Frequentistische Perspektive**")
+        st.write(
+            "Wir schätzen eine durchschnittliche Mittelwertdifferenz und "
+            "konstruieren ein 95%-**Konfidenzintervall**. Würde man das "
+            "Untersuchungsverfahren sehr oft unter gleichen Bedingungen "
+            "wiederholen, würden die so gebildeten Intervalle den wahren "
+            "Parameter in etwa 95 % der Fälle überdecken. Das konkrete "
+            "Intervall liefert **keine direkte 95%-Wahrscheinlichkeit** für μ."
+        )
+    with concept_b:
+        st.markdown("**Bayesianische Perspektive**")
+        st.write(
+            "Wir legen vor der Analyse **Priors** für den Gesamteffekt (μ) "
+            "und die Heterogenität (τ) fest. Zusammen mit den Studiendaten "
+            "entsteht eine **Posteriorverteilung**. Ein 95%-" 
+            "**Kredibilitätsintervall** enthält unter Modell und Priors "
+            "95 % der posterioren Wahrscheinlichkeit für μ."
+        )
+    st.info(
+        "**Die Schlüsselidee beim Updating:** Frequentistisch wird das Modell "
+        "mit dem aktuellen Datenstand erneut geschätzt. Bayesianisch aktualisieren "
+        "die Daten die vorherigen Annahmen. In dieser App wird für jede "
+        "Version derselbe ursprüngliche Prior mit dem vollständigen gültigen "
+        "Datensatz kombiniert – alte Studien werden dadurch nicht doppelt gezählt."
+    )
+    st.markdown("#### 1 · Priors festlegen")
+    st.write(
+        "Ein Prior ist die Verteilung, die wir **vor Betrachtung dieser Daten** "
+        "für einen Parameter annehmen. Eine grössere Prior-Standardabweichung "
+        "lässt einen breiteren Bereich von Werten zu. Probiere aus, ob sich "
+        "die Schlussfolgerung bei einem engeren oder breiteren Prior verändert."
+    )
     col_prior1, col_prior2 = st.columns(2)
     mu_prior_sd = col_prior1.select_slider("Prior-Standardabweichung für μ (Normal(0, SD))",
-                                           options=[1.0, 2.0, 5.0, 10.0], value=5.0)
+                                           options=[1.0, 2.0, 5.0, 10.0], value=5.0,
+                                           help="μ ist die wahre durchschnittliche MD. Ein Prior Normal(0, 5²) lässt stärkere Abweichungen von Null eher zu als Normal(0, 1²).")
     tau_prior_sd = col_prior2.select_slider("Prior-Standardabweichung für τ (Half-Normal(SD))",
-                                            options=[0.5, 1.0, 2.0, 4.0], value=2.0)
+                                            options=[0.5, 1.0, 2.0, 4.0], value=2.0,
+                                            help="τ beschreibt die Streuung der wahren Studieneffekte (ISI-Punkte). Eine Half-Normal-Verteilung erlaubt nur τ ≥ 0.")
+    st.caption(
+        f"Aktuell: μ ~ Normal(0, {mu_prior_sd:g}²); "
+        f"τ ~ Half-Normal({tau_prior_sd:g}). "
+        "Die Priors gewichten keine einzelnen Studien nach ihrer Qualität."
+    )
+    st.markdown("#### 2 · Schätzungen und Intervalle vergleichen")
     bayes = fit_bayesian(frame, threshold=threshold,
                          mu_prior_sd=mu_prior_sd, tau_prior_sd=tau_prior_sd)
     fa, fb = st.columns(2, gap="large")
@@ -247,18 +429,40 @@ with section_methods:
         st.metric("Gepoolte MD (REML)", f"{fit.mean:+.2f}")
         st.write(f"95%-Konfidenzintervall: **[{fit.ci_low:+.2f}; {fit.ci_high:+.2f}]**")
         st.write(f"Zwischenstudienvarianz τ²: **{fit.tau2:.3f}**")
-        st.caption("Das Konfidenzintervall hat eine langfristige Überdeckungsinterpretation, keine direkte Posterior-Wahrscheinlichkeit für μ.")
+        st.caption("95%-KI: Interpretation über die langfristige Überdeckungsrate des Verfahrens, nicht als Posteriorwahrscheinlichkeit.")
     with fb:
         st.markdown("#### Bayesianisch")
         st.metric("Posterior-Mittelwert μ", f"{bayes.mean:+.2f}")
         st.write(f"95%-Kredibilitätsintervall: **[{bayes.ci_low:+.2f}; {bayes.ci_high:+.2f}]**")
         st.write(f"P(μ < 0 | Daten): **{bayes.p_benefit:.1%}**")
         st.write(f"P(μ < {threshold:g} | Daten): **{bayes.p_relevant:.1%}**")
-        st.caption(f"Posterior-Mittelwert τ: {bayes.tau_mean:.2f}. Diese Wahrscheinlichkeiten sind von der Modell- und Priorwahl abhängig.")
+        st.caption(
+            f"Posterior-Mittelwert τ: {bayes.tau_mean:.2f}. "
+            "P(μ < 0) ist die bedingte Wahrscheinlichkeit eines "
+            "durchschnittlichen Vorteils der App. P(μ < Schwelle) ist die "
+            "Wahrscheinlichkeit eines mindestens so grossen, hier nur "
+            "illustrativ als relevant definierten Vorteils."
+        )
+    st.markdown("#### 3 · Die Posteriorverteilung lesen")
+    st.write(
+        "Die Kurve zeigt, welche Werte für den **durchschnittlichen wahren "
+        "Effekt μ** nach Daten und Priors mehr oder weniger plausibel sind. "
+        "Die **Fläche links von Null** entspricht P(μ < 0). "
+        f"Die **Fläche links von {threshold:g}** entspricht P(μ < {threshold:g}). "
+        "Das grün markierte Intervall enthält 95 % der posterioren Masse. "
+        "Ändere einen Prior und beobachte, ob sich diese Bereiche verschieben."
+    )
     density = bayesian_density(frame, mu_prior_sd=mu_prior_sd, tau_prior_sd=tau_prior_sd)
     st.plotly_chart(posterior_plot(density, threshold, bayes.ci_low, bayes.ci_high),
                     width="stretch", key="bayes_posterior")
-    st.markdown("#### Wie verändert sich die Wahrscheinlichkeit eines relevanten Effekts?")
+    st.markdown("#### 4 · Wie ändert sich die Wahrscheinlichkeit über die Versionen?")
+    st.write(
+        "Die Kurve zeigt für jede Review-Version die bayesianische "
+        "Wahrscheinlichkeit, dass die wahre durchschnittliche MD unter "
+        "der gewählten Relevanzschwelle liegt. Sie ist **keine** "
+        "Wahrscheinlichkeit, dass eine einzelne Studie signifikant wird. "
+        "Beachte besonders den Übergang von V1 zu V2 und die Korrektur in V4."
+    )
     b_history = []
     for v in VERSIONS:
         b = fit_bayesian(snapshot(v), threshold=threshold,
@@ -272,7 +476,28 @@ with section_methods:
                       xaxis_title="Review-Version", yaxis_title=f"P(μ < {threshold:g}) in %",
                       yaxis_range=[0,100], margin=dict(l=10,r=10,t=25,b=40))
     st.plotly_chart(fig, width="stretch", key="bayes_history")
-    st.info("Keine sequenzielle Doppelzählung: Jeder Snapshot verwendet denselben ursprünglichen Prior und ausschliesslich die zu dieser Version gültigen Daten. Eine Datenkorrektur ersetzt die alte Extraktion vollständig.")
+    with st.expander("Häufige Verständnisfragen: KI, Kredibilitätsintervall, Priors und Updating"):
+        st.markdown(
+            "**Warum unterscheiden sich die Punktschätzungen?** Das "
+            "frequentistische Modell bestimmt die Heterogenität über REML; "
+            "die bayesianische Analyse integriert die Unsicherheit über τ "
+            "und bezieht die Priors für μ und τ ein.\n\n"
+            "**Kann ich sagen, die Intervention wirkt mit 95 % Wahrscheinlichkeit?** "
+            "Nur eine klar definierte bayesianische Aussage wie "
+            "P(μ < 0 | Daten, Modell, Priors) ist in dieser Weise "
+            "interpretierbar. Ein frequentistisches 95%-KI "
+            "bedeutet nicht P(μ im Intervall) = 95 %.\n\n"
+            "**Sind engere Priors immer besser?** Nein. Zu enge Priors "
+            "können die Ergebnisse unverhältnismässig beeinflussen; "
+            "deshalb lohnt sich eine Prior-Sensitivitätsanalyse.\n\n"
+            "**Was bedeutet 'living' für die Statistik?** Neue oder "
+            "korrigierte Daten verändern den jeweiligen Snapshot. "
+            "Die wiederholten frequentistischen Intervalle dieser Demo "
+            "sind nicht sequenziell adjustiert; bayesianische "
+            "Wahrscheinlichkeiten sind modellbedingt und keine Garantie "
+            "gegen Bias oder selektive Berichterstattung."
+        )
+    st.info("Jeder Snapshot wird mit demselben ursprünglichen Prior und nur den jeweils gültigen Daten berechnet. Eine Datenkorrektur ersetzt alte Werte vollständig; sie wird nicht als zusätzliche Studie gezählt.")
     with st.expander("Statistisches Modell und Einschränkungen"):
         st.latex(r"y_i\mid \mu,\tau \sim \mathcal{N}(\mu,\,v_i+\tau^2)")
         st.latex(r"\mu \sim \mathcal{N}(0,\sigma_{\mu}^2),\quad \tau\sim\operatorname{HalfNormal}(\sigma_{\tau})")

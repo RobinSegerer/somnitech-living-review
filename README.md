@@ -19,10 +19,17 @@ Die Anwendung öffnet sich im Browser, normalerweise unter `http://localhost:850
 
 ## Vier Bereiche
 
-1. **Living Review:** Version V0 bis V4 wählen; Forest Plots, gepoolte MD, Konfidenzintervalle, Heterogenität, Vergleich mit allen bisherigen Snapshots und eine Low-RoB-Sensitivitätsanalyse.
-2. **Experimentierlabor:** Gruppendaten in einer Tabelle editieren, zusätzliche hypothetische RCTs hinzufügen, Random-Effects-Metaanalyse neu berechnen, Studien als CSV exportieren. Experimentelle Werte bleiben ausschliesslich in der aktuellen Streamlit-Sitzung und verändern die Original-CSV nicht.
-3. **Frequentistisch vs. Bayes:** REML/Hartung-Knapp gegen analytisch integrierte normal-normale bayesianische Random-Effects-Metaanalyse mit verstellbaren Priors und Posteriorwahrscheinlichkeit eines illustrativ relevanten Effekts.
+1. **Living Review:** Einführung in die fiktive SomniTech-Studiengeschichte mit PICO und Erläuterung des ISI; Version V0 bis V4 wählen. Die Seite enthält eine Forest-Plot-Lesehilfe, dynamische Leitfragen zu jeder Version, die Interpretation von MD, Konfidenzintervall und I² sowie eine Low-RoB-Sensitivitätsanalyse.
+2. **Experimentierlabor:** Schritt-für-Schritt-Anleitung mit drei konkreten Übungen (grosse Nullstudie, Präzision verändern, Datenkorrektur). Gruppendaten in einer Tabelle editieren, zusätzliche hypothetische RCTs hinzufügen, Random-Effects-Metaanalyse neu berechnen, Studien als CSV exportieren. Experimentelle Werte bleiben ausschliesslich in der aktuellen Streamlit-Sitzung und verändern die Original-CSV nicht.
+3. **Frequentistisch vs. Bayes:** Erläuterung der beiden Unsicherheitsbegriffe, Prior-Wahl und typische Interpretationsfehler; REML/Hartung-Knapp gegen analytisch integrierte normal-normale bayesianische Random-Effects-Metaanalyse mit verstellbaren Priors und Posteriorwahrscheinlichkeit eines illustrativ relevanten Effekts.
 4. **Workflow & Daten:** Suche/Screening/Extraktion/Reanalyse/Publikation; Ereignisprotokoll und Exporte für Snapshots, Versionen und Suchereignisse.
+
+### Kurze geführte Tour
+
+1. Öffne **01 · Living Review** und lies zunächst die fiktive Forschungsfrage. Wähle links **V0**, dann **V1** bis **V4**. Erkunde mit dem Mauszeiger Studiengewicht und Konfidenzintervalle und beachte, was sich in V4 *ohne* neue Studie verändert.
+2. Öffne **02 · Experimentierlabor**. Klappe **Drei angeleitete Experimente** auf und füge z. B. eine grosse Nullstudie hinzu; beobachte rechts den Unterschied zur Originalanalyse.
+3. Öffne **03 · Frequentistisch vs. Bayes**. Variiere zuerst den Prior für den durchschnittlichen Effekt μ, dann für die Heterogenität τ. Vergleiche, was das 95%-Konfidenzintervall, das 95%-Kredibilitätsintervall und P(μ < −2) aussagen.
+4. Unter **04 · Workflow & Daten** siehst du, welche Schritte den simulierten Analyseversionen zugrunde liegen.
 
 ## Daten und didaktischer Verlauf
 
@@ -56,6 +63,7 @@ app.py                   Streamlit-Oberfläche
 src/analysis.py          Frequentistische und bayesianische Statistik
 src/data.py              Snapshot- und Datenlogik
 src/plots.py             Interaktive Plotly-Abbildungen
+src/explanations.py      Didaktische Texte zu Versionen und Laborübungen
 data/studies.csv         13 synthetische Studien + S06-Korrektur
 data/events.csv          Ereignisprotokoll der Living-Review-Updates
 tests/test_analysis.py   Regressions-, Revisions- und Plausibilitätstests
