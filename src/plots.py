@@ -96,3 +96,53 @@ def posterior_plot(density: pd.DataFrame, threshold: float, ci_low: float, ci_hi
                       xaxis_title="Overall effect μ (ISI points)",
                       yaxis_title="Posterior density", margin=dict(l=8,r=10,t=40,b=40))
     return fig
+
+
+def updating_plot(story, threshold: float) -> go.Figure:
+    """Display the marginal Bayesian update; the factor uses its own scale.
+
+    Prior/posterior curves are probability *densities* for the overall effect.
+    The dotted curve is a relative, peak-normalised update/revision factor:
+    it is NOT a third probability distribution.
+    """
+    x = story.curves["MD"].to_numpy(float)
+    prior = story.curves["Prior density"].to_numpy(float)
+    post = story.curves["Posterior density"].to_numpy(float)
+    factor = story.curves["Relative update factor"].to_numpy(float)
+    label = "Relative revision factor" if story.kind == "correction" else "Relative evidence update"
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=x, y=prior, name="Before update · prior for this step",
+        mode="lines", line=dict(color=BLUE, width=3),
+        hovertemplate="MD %{x:.2f}<br>Prior density %{y:.3f}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=x, y=post, name="After update · posterior",
+        mode="lines", line=dict(color=GREEN, width=3),
+        fill="tozeroy", fillcolor="rgba(22,138,123,.08)",
+        hovertemplate="MD %{x:.2f}<br>Posterior density %{y:.3f}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=x, y=factor, name=label + " (scaled)",
+        mode="lines", yaxis="y2",
+        line=dict(color=ORANGE, width=2.5, dash="dot"),
+        hovertemplate="MD %{x:.2f}<br>Relative factor (scaled) %{y:.3f}<extra></extra>",
+    ))
+    fig.add_vline(x=0, line_color=GREY, line_dash="dash")
+    fig.add_vline(x=threshold, line_color=ORANGE, line_dash="dash")
+    fig.update_layout(
+        title="How evidence changes beliefs about the overall effect",
+        template="plotly_white",
+        height=445,
+        margin=dict(l=10, r=15, t=60, b=55),
+        hovermode="x",
+        xaxis_title="Overall mean difference μ (ISI points)",
+        yaxis=dict(title="Probability density of μ", rangemode="tozero"),
+        yaxis2=dict(
+            title="Relative update factor (scaled to 1)",
+            overlaying="y", side="right", range=[0, 1.08],
+            showgrid=False,
+        ),
+        legend=dict(orientation="h", yanchor="bottom", y=1.08, x=0),
+    )
+    return fig
