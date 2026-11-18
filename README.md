@@ -51,6 +51,19 @@ Use **the same study data** for both approaches and compare their interpretation
 
 The page explains priors, posterior distributions, the difference between confidence and credible intervals, and how results evolve over versions. Old studies are **not counted twice**: every Bayesian snapshot uses the original prior and the full valid evidence available at that time.
 
+#### Interactive Bayesian updating (new)
+
+A guided selector for **V0–V4** shows how the posterior from the preceding review version becomes the prior for the next evidence update. A Plotly chart includes:
+
+- **Blue:** prior to this step (the original prior for V0, otherwise the previous version's posterior marginal for μ).
+- **Orange dotted:** a peak-scaled **relative updating factor** for μ, indicating which values gain or lose support. This is **not a probability density** and uses its own right-hand vertical axis. It accounts for uncertainty about heterogeneity τ through the previous joint model.
+- **Green:** posterior after including the new evidence.
+
+A probability table compares **P(μ < 0)** and **P(μ < the chosen illustrative threshold)** before and after each step. V1–V3 incorporate newly added trials. V4 demonstrates that a correction is different: the incorrect S06 contribution must be **removed and replaced**, rather than adding the corrected data as another independent trial.
+
+**Why full reanalysis is still correct:** With unchanged model and priors, recomputing each complete evidence snapshot under the same original joint prior is algebraically equivalent to sequentially updating the **joint** p(μ, τ) posterior. It is generally *not* sufficient to carry forward only the marginal distribution of μ when τ is also uncertain.
+
+
 ### 04 · Workflow & Data
 
 Explore the steps of a living review—surveillance, screening, extraction and quality assurance, reanalysis, and publication. Review the synthetic event log and export versioned datasets, event records, and pooled estimates.
