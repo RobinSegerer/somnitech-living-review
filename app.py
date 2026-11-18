@@ -181,7 +181,7 @@ with section_review:
     st.plotly_chart(history_plot(history, selected=version, threshold=threshold),
                     width="stretch", key="history_plot")
     st.caption(
-        "Jede Zeile zeigt den Gesamteffekt einer eigenen Review version mit "
+        "Each row shows the pooled effect for one review version, with its "
         "95% confidence interval. The dashed zero line denotes no difference; "
         "the dotted line marks the illustrative "
         "relevance threshold set in the sidebar. The selected version is highlighted in orange."
@@ -211,7 +211,7 @@ with section_review:
         lower_fit = fit_random_effects(lowrisk)
         a,b = st.columns(2)
         a.metric("Low risk of bias only", f"{lower_fit.mean:+.2f}",
-                 help=f"{len(lowrisk)} von {len(frame)} studies.")
+                 help=f"{len(lowrisk)} of {len(frame)} studies.")
         b.metric("95% CI for this subset", f"[{lower_fit.ci_low:+.2f}; {lower_fit.ci_high:+.2f}]")
         st.caption("Exploratory sensitivity analysis only. No automatic GRADE certainty assessment; individual RoB 2 domains are not simulated.")
     else:
@@ -223,7 +223,7 @@ with section_lab:
         "Here you can change the meta-analysis yourself. Begin with the "
         f"**{fit.k} studies in {version}** as your starting point. This is a "
         "**what-if simulation**: it does not change published "
-        "Originaldaten und legt keine neuen Review versionen an."
+        "source data or create additional review versions."
     )
     st.markdown("**What can you try?**")
     st.markdown(
@@ -306,13 +306,13 @@ with section_lab:
             with st.form("add_exp_study"):
                 study_name = st.text_input("Study label", value="New study (simulation)")
                 n1, n2 = st.columns(2)
-                n_int = n1.number_input("N Intervention", min_value=2, value=200, step=10)
+                n_int = n1.number_input("N intervention", min_value=2, value=200, step=10)
                 n_ctrl = n2.number_input("N control", min_value=2, value=200, step=10)
                 x1, x2 = st.columns(2)
                 mean_int = x1.number_input("Mean ISI, intervention", value=11.0, step=.1)
                 mean_ctrl = x2.number_input("Mean ISI, control", value=12.0, step=.1)
                 x3, x4 = st.columns(2)
-                sd_int = x3.number_input("SD Intervention", min_value=.01, value=4.0, step=.1)
+                sd_int = x3.number_input("SD intervention", min_value=.01, value=4.0, step=.1)
                 sd_ctrl = x4.number_input("SD control", min_value=.01, value=4.0, step=.1)
                 rob = st.selectbox("Risk of Bias", ["Low", "Some concerns", "High"])
                 submitted = st.form_submit_button("Add study")
@@ -358,7 +358,7 @@ with section_lab:
             st.plotly_chart(forest_plot(experiment, result, title="Experimental forest plot"),
                             width="stretch", key="experimental_forest")
             out = calculate_effects(experiment)
-            st.download_button("Experimentelle studiesdaten als CSV",
+            st.download_button("Download experimental study data (CSV)",
                                data=out.to_csv(index=False).encode("utf-8-sig"),
                                file_name="somnitech_experiment.csv", mime="text/csv")
         except ValueError as exc:
@@ -482,7 +482,7 @@ with section_methods:
             "frequentist analysis estimates heterogeneity using REML; "
             "the Bayesian analysis integrates uncertainty about τ "
             "and incorporates the priors for μ and τ.\n\n"
-            "**Kann ich sagen, die Intervention wirkt mit 95 % Probability?** "
+            "**Can I say there is a 95% probability the intervention works?** "
             "Only a clearly specified Bayesian probability such as "
             "P(μ < 0 | data, model, priors) can be "
             "interpreted this way. A frequentist 95% confidence interval "
@@ -494,7 +494,7 @@ with section_methods:
             "corrected data change the current evidence snapshot. "
             "The repeated frequentist intervals in this demonstration "
             "are not adjusted for sequential testing; Bayesian "
-            "Probabilityen sind modellbedingt und keine Garantie "
+            "probabilities depend on model assumptions and do not protect "
             "against bias or selective reporting."
         )
     st.info("Each snapshot uses the same original prior and only the data valid for that version. Corrected values replace earlier values rather than being treated as an additional study.")
