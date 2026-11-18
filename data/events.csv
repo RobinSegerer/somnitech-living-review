@@ -1,0 +1,15 @@
+version,event_date,event_type,study_id,details
+V0,2024-06-01,initial_search,,Initial literature search completed
+V0,2024-06-20,initial_publication,,Version V0 published with four RCTs
+V0,2024-12-01,monitoring_no_change,,Search updated; no new eligible RCT
+V1,2025-07-01,search_update,,Alert identifies two additional RCTs
+V1,2025-07-15,reanalysis,,Six RCTs included in V1
+V1,2025-07-18,new_review_version,,Updated conclusion published
+V2,2026-09-01,search_update,,Three larger RCTs identified
+V2,2026-09-20,reanalysis,,Nine RCTs included in V2
+V2,2026-09-22,new_review_version,,Previous conclusion reassessed
+V3,2027-07-01,search_update,,Four additional eligible RCTs
+V3,2027-07-15,reanalysis,,Thirteen RCTs included in V3
+V4,2027-10-01,data_correction,S06,Corrected eight-week follow-up outcome replaces mistakenly extracted four-week outcome
+V4,2027-10-05,reanalysis,,No new studies; effect estimates recalculated
+V4,2027-10-10,new_review_version,,Correction and revised conclusion documented
