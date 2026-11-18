@@ -12,9 +12,9 @@ def test_every_review_version_has_a_guided_reading():
 
 def test_correction_explained_as_replacing_data_not_new_study():
     v4 = VERSION_GUIDE["V4"]["observation"].lower()
-    assert "keine neue studie" in v4
-    assert "ersetzt" in v4
-    assert "achtwochenwert" in v4
+    assert "no new study" in v4
+    assert "replaced" in v4
+    assert "eight-week outcome" in v4
 
 
 def test_laboratory_has_three_concrete_exercises():
