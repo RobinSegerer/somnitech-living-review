@@ -7,6 +7,19 @@ from src.plots import forest_plot, posterior_plot
 from src.updating import build_updating_story
 
 
+def test_forest_plot_tolerates_pre_prediction_interval_cached_results():
+    """Old pickled model objects must not crash the forest plot during redeploy."""
+    from types import SimpleNamespace
+    frame = snapshot("V0")
+    fit = fit_random_effects(frame)
+    old_fields = {key: value for key, value in vars(fit).items()
+                  if key not in ("pi_low", "pi_high")}
+    old_fit = SimpleNamespace(**old_fields)
+    fig = forest_plot(frame, old_fit)
+    assert all(trace.name != "Approx. 95% prediction interval"
+               for trace in fig.data)
+
+
 def test_app_compiles():
     source = Path("app.py").read_text(encoding="utf-8")
     compile(source, "app.py", "exec")
