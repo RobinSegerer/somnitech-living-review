@@ -204,6 +204,21 @@ with section_review:
         "study estimates that exceeds what is expected from sampling error "
         "(based on Q); it is **not a study-quality score**."
     )
+    with st.expander("Confidence interval vs. prediction interval: what is different?"):
+        st.write(
+            "The **95% confidence interval (CI)** describes uncertainty about "
+            "the **average effect across settings**. The **95% prediction interval (PI)** "
+            "indicates a plausible range for the **true effect in a new setting**, "
+            "including differences between settings (heterogeneity τ). "
+            "The dotted green line beneath the pooled diamond shows this PI. "
+            "When studies disagree, even a convincing average benefit may "
+            "coexist with little or no benefit in a new setting."
+        )
+        st.caption(
+            "The frequentist PI is approximate, based on REML τ² and "
+            "a t(k−2) critical value. It is not shown for fewer than three "
+            "studies and can be especially unreliable when k is small."
+        )
 
     col_forest, col_side = st.columns([2.25, 1.0], gap="large")
     with col_forest:
@@ -519,14 +534,15 @@ with section_methods:
         "The priors do not assign study-specific weights based on methodological quality."
     )
     st.markdown("#### 2 · Compare estimates and uncertainty intervals")
-    bayes = fit_bayesian(frame, threshold=threshold,
-                         mu_prior_sd=mu_prior_sd, tau_prior_sd=tau_prior_sd)
+    bayes = cached_bayesian(version, threshold, mu_prior_sd, tau_prior_sd)
     fa, fb = st.columns(2, gap="large")
     with fa:
         st.markdown("#### Frequentist")
         st.metric("Pooled MD (REML)", f"{fit.mean:+.2f}")
         st.write(f"95% confidence interval: **[{fit.ci_low:+.2f}; {fit.ci_high:+.2f}]**")
         st.write(f"Between-study variance τ²: **{fit.tau2:.3f}**")
+        if fit.pi_low is not None:
+            st.write(f"Approx. 95% prediction interval for θ_new: **[{fit.pi_low:+.2f}; {fit.pi_high:+.2f}]**")
         st.caption("A 95% confidence interval is interpreted through the procedure's long-run coverage, not as a posterior probability.")
     with fb:
         st.markdown("#### Bayesian")
@@ -534,6 +550,9 @@ with section_methods:
         st.write(f"95% credible interval: **[{bayes.ci_low:+.2f}; {bayes.ci_high:+.2f}]**")
         st.write(f"P(μ < 0 | data): **{bayes.p_benefit:.1%}**")
         st.write(f"P(μ < {threshold:g} | data): **{bayes.p_relevant:.1%}**")
+        st.write(f"95% posterior predictive interval for θ_new: **[{bayes.pred_ci_low:+.2f}; {bayes.pred_ci_high:+.2f}]**")
+        st.write(f"P(θ_new < 0 | data): **{bayes.p_pred_benefit:.1%}**")
+        st.write(f"P(θ_new < {threshold:g} | data): **{bayes.p_pred_relevant:.1%}**")
         st.caption(
             f"Posterior mean τ: {bayes.tau_mean:.2f}. "
             "P(μ < 0) is the posterior probability of an "
@@ -541,6 +560,14 @@ with section_methods:
             "probability of an effect at least as large as the "
             "illustrative threshold for a meaningful benefit."
         )
+    st.info(
+        "**Mean benefit ≠ benefit in a new setting:** μ is the average true effect, "
+        "whereas θ_new is the true effect in an exchangeable new implementation. "
+        "The Bayesian predictive distribution integrates uncertainty about "
+        "both μ and τ; it does **not** add the sampling error of a future trial. "
+        "With heterogeneous studies, P(θ_new below a threshold) may differ "
+        "markedly from P(μ below that threshold)."
+    )
     st.markdown("#### 3 · Read the posterior distribution")
     st.write(
         "The curve shows which values of the **true overall "
@@ -550,7 +577,7 @@ with section_methods:
         "The green band contains 95% of the posterior probability mass. "
         "Change a prior and observe how the distribution and probabilities respond."
     )
-    density = bayesian_density(frame, mu_prior_sd=mu_prior_sd, tau_prior_sd=tau_prior_sd)
+    density = cached_density(version, threshold, mu_prior_sd, tau_prior_sd)
     st.plotly_chart(posterior_plot(density, threshold, bayes.ci_low, bayes.ci_high),
                     width="stretch", key="bayes_posterior")
     st.divider()
@@ -565,19 +592,16 @@ with section_methods:
         "Choose an update below. This selector is independent of the review version "
         "in the sidebar, so you can compare any step in the evidence timeline."
     )
+    if st.button("Match sidebar version", key="match_bayesian_sidebar_version"):
+        st.session_state["bayesian_update_to_inspect"] = version
     update_version = st.select_slider(
         "Bayesian update to inspect",
         options=list(VERSIONS),
-        value=version if version != "V0" else "V1",
+        value="V1",
         help="V0: original prior and first four trials. V1–V3: previous posterior plus new trials. V4: replace an erroneous outcome; no new trial.",
         key="bayesian_update_to_inspect",
     )
-    story = build_updating_story(
-        update_version,
-        threshold=threshold,
-        mu_prior_sd=mu_prior_sd,
-        tau_prior_sd=tau_prior_sd,
-    )
+    story = cached_updating(update_version, threshold, mu_prior_sd, tau_prior_sd)
     before_label = "Original prior" if story.previous_version is None else f"Posterior from {story.previous_version}"
     after_label = f"Posterior for {story.version}"
     if story.kind == "initial":
@@ -586,7 +610,7 @@ with section_methods:
             "prior for τ, then learn from the four initial trials. This is the "
             "first update, before any published review version exists."
         )
-    elif story.kind == "correction":
+    elif story.kind in ("correction", "mixed"):
         st.warning(
             "**V4 · Data correction, not a new trial:** The old S06 four-week result "
             "is removed and replaced by its corrected eight-week result. "
@@ -595,12 +619,14 @@ with section_methods:
             "the correct before/after revision based on the valid snapshots."
         )
         st.caption(f"Revised study IDs: {', '.join(story.corrected_studies)}.")
-    else:
+    elif story.kind == "addition":
         st.success(
             f"**{story.previous_version} → {story.version}:** "
             f"{len(story.added_studies)} newly included trial(s): "
             + ", ".join(story.added_studies)
         )
+    elif story.kind == "no_change":
+        st.info("No changes to the included studies in this review version.")
     step_a, step_b, step_c = st.columns(3, gap="medium")
     with step_a:
         st.markdown(f"**1 · Before update**")
@@ -649,6 +675,19 @@ with section_methods:
         f"{story.study_count_after} after this step. A change in probability "
         "does not by itself establish certainty of evidence or clinical benefit."
     )
+    st.markdown("**Updating heterogeneity matters too**")
+    before_tau, after_tau = st.columns(2)
+    before_tau.metric("Before update · E[τ]", f"{story.prior_tau_mean:.2f} ISI points")
+    after_tau.metric("After update · E[τ]", f"{story.posterior_tau_mean:.2f} ISI points",
+                     delta=f"{story.posterior_tau_mean-story.prior_tau_mean:+.2f}",
+                     delta_color="off")
+    st.caption(
+        "These are posterior means of the between-study SD τ, not I². "
+        "Contradictory studies may increase τ even when the average estimated "
+        "effect moves towards zero. An update must carry forward uncertainty "
+        "about both μ and τ."
+    )
+
     with st.expander("Why does the entire joint posterior matter?"):
         if story.kind == "correction":
             st.latex(
@@ -693,8 +732,7 @@ with section_methods:
     )
     b_history = []
     for v in VERSIONS:
-        b = fit_bayesian(snapshot(v), threshold=threshold,
-                         mu_prior_sd=mu_prior_sd, tau_prior_sd=tau_prior_sd)
+        b = cached_bayesian(v, threshold, mu_prior_sd, tau_prior_sd)
         b_history.append(dict(Version=v, Probability=b.p_relevant, P_benefit=b.p_benefit))
     b_table = pd.DataFrame(b_history)
     fig = go.Figure(go.Scatter(x=b_table["Version"], y=100*b_table["Probability"],
