@@ -414,7 +414,7 @@ with section_lab:
     )
     if "exp_baseline" not in st.session_state or st.session_state.exp_baseline != version:
         st.session_state.exp_baseline = version
-        st.session_state.exp_frame = snapshot(version).assign(include=True).assign(include=True)
+        st.session_state.exp_frame = snapshot(version).assign(include=True)
         st.session_state.editor_revision = st.session_state.get("editor_revision", 0) + 1
 
     left, right = st.columns([1.4, 1.0], gap="large")
@@ -464,10 +464,27 @@ with section_lab:
             except (ValueError, TypeError, KeyError) as exc:
                 st.error(f"Invalid study data: {exc}")
         if st.button("Reset experiment to original version"):
-            st.session_state.exp_frame = snapshot(version)
+            st.session_state.exp_frame = snapshot(version).assign(include=True)
             st.session_state.editor_revision += 1
             st.rerun()
 
+        st.markdown("**File-drawer scenario · unpublished null trials**")
+        st.caption(
+            "Imagine that two large, null-effect RCTs existed but were never published. "
+            "This is a fully hypothetical sensitivity exercise, not evidence that "
+            "publication bias or these unpublished studies actually exist."
+        )
+        if st.button("Add 2 hypothetical unpublished null-effect trials",
+                     key="add_file_drawer_preset"):
+            st.session_state.exp_frame = add_file_drawer_trials(
+                st.session_state.exp_frame
+            )
+            st.session_state.editor_revision += 1
+            st.rerun()
+        st.caption(
+            "Each trial has 500 participants per arm, ISI means of 12 vs 12 and "
+            "SDs of 4. The button is idempotent; Reset removes the scenario."
+        )
         with st.expander("Add a new synthetic study"):
             with st.form("add_exp_study"):
                 study_name = st.text_input("Study label", value="New study (simulation)")
