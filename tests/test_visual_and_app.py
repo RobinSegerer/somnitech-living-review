@@ -54,5 +54,5 @@ def test_updating_tracks_tau_mean():
 def test_streamlit_application_smoke_render():
     """Run the UI without a browser to catch widget and runtime regressions."""
     from streamlit.testing.v1 import AppTest
-    app = AppTest.from_file("app.py", default_timeout=120).run()
+    app = AppTest.from_file(Path(__file__).resolve().parents[1] / "app.py", default_timeout=120).run()
     assert len(app.exception) == 0, [str(x.message) for x in app.exception]
