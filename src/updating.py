@@ -44,6 +44,8 @@ class UpdatingStory:
     posterior_relevant: float
     prior_mean: float
     posterior_mean: float
+    prior_tau_mean: float
+    posterior_tau_mean: float
     curves: pd.DataFrame
 
 
@@ -103,6 +105,7 @@ def build_updating_story(
         prior_benefit = float(norm.cdf(0, loc=0, scale=mu_prior_sd))
         prior_relevant = float(norm.cdf(threshold, loc=0, scale=mu_prior_sd))
         prior_mean = 0.0
+        prior_tau_mean = float(tau_prior_sd * np.sqrt(2 / np.pi))
         added_names = tuple(str(x) for x in current["author_year"])
         corrected_ids: tuple[str, ...] = ()
         kind = "initial"
@@ -115,10 +118,13 @@ def build_updating_story(
         prior_benefit = before.p_benefit
         prior_relevant = before.p_relevant
         prior_mean = before.mean
+        prior_tau_mean = before.tau_mean
         xmin = min(xmin, before.ci_low - 1.2)
         xmax = max(xmax, before.ci_high + 1.2)
         added_names, corrected_ids = _difference_between_snapshots(previous, current)
-        kind = "correction" if corrected_ids else "addition"
+        kind = ("mixed" if added_names and corrected_ids else
+                "correction" if corrected_ids else
+                "addition" if added_names else "no_change")
         before_count = len(previous)
 
     x = np.linspace(xmin, xmax, points)
@@ -138,19 +144,17 @@ def build_updating_story(
     # p(mu | current) / p(mu | previous) is proportional to the effective
     # incremental likelihood (or replacement factor in V4), *after* tau has
     # been integrated out with the previous conditional distribution.
-    ratio = np.divide(
-        posterior_density, prior_density,
-        out=np.full_like(posterior_density, np.nan), where=prior_density > 1e-250,
-    )
-    # Suppress numerical instability where either density is negligible.
+    # Work in log space in the meaningful overlap to avoid underflow in
+    # ratios of small densities. The resulting factor is peak-normalised.
     overlap = (
-        (prior_density >= np.max(prior_density) * 0.0005)
-        & (posterior_density >= np.max(posterior_density) * 0.0005)
-        & np.isfinite(ratio)
+        (prior_density >= np.max(prior_density) * .0005)
+        & (posterior_density >= np.max(posterior_density) * .0005)
+        & (prior_density > 0) & (posterior_density > 0)
     )
-    factor = np.full_like(ratio, np.nan)
+    factor = np.full_like(prior_density, np.nan)
     if np.any(overlap):
-        factor[overlap] = ratio[overlap] / np.max(ratio[overlap])
+        log_ratio = np.log(posterior_density[overlap]) - np.log(prior_density[overlap])
+        factor[overlap] = np.exp(log_ratio - np.max(log_ratio))
 
     curves = pd.DataFrame({
         "MD": x,
@@ -172,5 +176,7 @@ def build_updating_story(
         posterior_relevant=float(posterior.p_relevant),
         prior_mean=float(prior_mean),
         posterior_mean=float(posterior.mean),
+        prior_tau_mean=float(prior_tau_mean),
+        posterior_tau_mean=float(posterior.tau_mean),
         curves=curves,
     )
