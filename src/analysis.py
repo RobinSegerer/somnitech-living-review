@@ -6,7 +6,6 @@ values favour intervention. Illustrative educational use; no clinical evidence.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -35,6 +34,8 @@ class MetaResult:
     q: float
     q_pvalue: float
     weights_percent: np.ndarray
+    pi_low: float | None = None
+    pi_high: float | None = None
     method: str = "REML + modified Hartung–Knapp (ad hoc)"
 
 
@@ -50,6 +51,10 @@ class BayesResult:
     mu_prior_sd: float
     tau_prior_sd: float
     threshold: float
+    pred_ci_low: float
+    pred_ci_high: float
+    p_pred_benefit: float
+    p_pred_relevant: float
 
 
 def validate_studies(frame: pd.DataFrame, min_studies: int = 2) -> pd.DataFrame:
@@ -68,12 +73,15 @@ def validate_studies(frame: pd.DataFrame, min_studies: int = 2) -> pd.DataFrame:
     for col in NUMERICAL_COLUMNS:
         out[col] = pd.to_numeric(out[col], errors="coerce")
         if not np.isfinite(out[col].to_numpy(dtype=float)).all():
-            raise ValueError(f"Spalte '{col}' contains missing or invalid values.")
+            raise ValueError(f"Column '{col}' contains missing or invalid values.")
     for col in ("n_int", "n_ctrl"):
         values = out[col].to_numpy(float)
         if (values < 2).any() or not np.all(values == np.floor(values)):
             raise ValueError(f"'{col}' must be an integer ≥ 2.")
         out[col] = out[col].astype(int)
+    for col in ("mean_int", "mean_ctrl"):
+        if not out[col].between(0, 28).all():
+            raise ValueError(f"'{col}' must be within the ISI scale (0–28).")
     for col in ("sd_int", "sd_ctrl"):
         if (out[col] <= 0).any():
             raise ValueError(f"'{col}' must be positive.")
@@ -133,6 +141,10 @@ def fit_random_effects(frame: pd.DataFrame) -> MetaResult:
     q_re = float(np.sum(w * (yi - mu) ** 2))
     se = np.sqrt(max(1.0, q_re / (k - 1)) / np.sum(w))
     margin = float(student_t.ppf(.975, df=k - 1) * se)
+    # An approximate true-effect prediction interval, only when k >= 3.
+    # With k=2 modified HK uses t(1) ≈ 12.71, so the CI can be very wide.
+    pi_margin = (float(student_t.ppf(.975, df=k - 2) * np.sqrt(tau2 + se**2))
+                 if k >= 3 else None)
     return MetaResult(
         k=k,
         n_total=int(effects["n_int"].sum() + effects["n_ctrl"].sum()),
@@ -140,37 +152,42 @@ def fit_random_effects(frame: pd.DataFrame) -> MetaResult:
         se_hk=float(se), tau2=tau2, tau=np.sqrt(tau2), i2=i2,
         q=q_fe, q_pvalue=float(chi2.sf(q_fe, df=k - 1)),
         weights_percent=100 * w / np.sum(w),
+        pi_low=mu - pi_margin if pi_margin is not None else None,
+        pi_high=mu + pi_margin if pi_margin is not None else None,
     )
 
 
-def fit_bayesian(
-    frame: pd.DataFrame,
-    threshold: float = -2.0,
-    mu_prior_sd: float = 5.0,
-    tau_prior_sd: float = 2.0,
-    grid_size: int = 2001,
-) -> BayesResult:
-    """Exact tau-grid quadrature for a Bayesian normal-normal RE model.
+@dataclass(frozen=True)
+class TauGrid:
+    """Shared quadrature for p(tau | data) and p(mu | data, tau)."""
+    tau: np.ndarray
+    weight: np.ndarray
+    mu: np.ndarray
+    sd_mu: np.ndarray
 
-    y_i | mu,tau ~ N(mu, vi+tau²); mu ~ N(0, mu_prior_sd²);
-    tau ~ HalfNormal(tau_prior_sd). Integrate out mu analytically;
-    integrate tau numerically, without MCMC sampling.
+
+def _bayesian_tau_grid(frame: pd.DataFrame, mu_prior_sd: float,
+                       tau_prior_sd: float, grid_size: int = 2001) -> TauGrid:
+    """Analytically integrate mu, then integrate tau on a quadratic grid.
+
+    Nonuniform trapezoidal weights preserve integration accuracy near tau=0
+    even if the maximum plausible heterogeneity is large.
     """
-    if not (mu_prior_sd > 0 and tau_prior_sd > 0):
-        raise ValueError("Prior standard deviations must be positive.")
+    if not (np.isfinite(mu_prior_sd) and np.isfinite(tau_prior_sd)
+            and mu_prior_sd > 0 and tau_prior_sd > 0):
+        raise ValueError("Prior standard deviations must be positive and finite.")
     if grid_size < 401:
-        raise ValueError("At least 401 grid points required for integration.")
+        raise ValueError("At least 401 grid points are required for integration.")
     effects = calculate_effects(frame)
     yi, vi = effects["yi"].to_numpy(float), effects["vi"].to_numpy(float)
     max_tau = max(10.0, 9.0 * tau_prior_sd, np.ptp(yi) * 5.0)
-    taus = np.linspace(0, max_tau, grid_size)
+    taus = max_tau * np.linspace(0, 1, grid_size)**2
     vtot = vi[None, :] + taus[:, None] ** 2
     w = 1.0 / vtot
     precision = w.sum(axis=1) + 1.0 / mu_prior_sd**2
     b = (w * yi[None, :]).sum(axis=1)
     mu_cond = b / precision
     sigma_cond = np.sqrt(1.0 / precision)
-    # log p(y | tau), integrating out normal prior p(mu).
     log_evidence = -0.5 * (
         len(yi) * np.log(2 * np.pi)
         + np.log(vtot).sum(axis=1)
@@ -179,49 +196,74 @@ def fit_bayesian(
         - b**2 / precision
     )
     log_prior_tau = np.log(np.sqrt(2 / np.pi) / tau_prior_sd) - .5 * (taus / tau_prior_sd)**2
-    logpost = log_evidence + log_prior_tau
-    # Trapezoidal weights at the endpoints avoid a spurious atom at tau=0.
-    trapezoid = np.ones(grid_size)
-    trapezoid[[0, -1]] = .5
-    logweights = logpost + np.log(trapezoid)
-    normalized = np.exp(logweights - logsumexp(logweights))
+    delta = np.diff(taus)
+    traps = np.empty(grid_size)
+    traps[0], traps[-1] = delta[0] / 2, delta[-1] / 2
+    traps[1:-1] = (delta[:-1] + delta[1:]) / 2
+    logweight = log_evidence + log_prior_tau + np.log(traps)
+    normalized = np.exp(logweight - logsumexp(logweight))
+    return TauGrid(taus, normalized, mu_cond, sigma_cond)
 
-    def cdf_mu(x: float) -> float:
-        return float(np.sum(normalized * ndtr((x - mu_cond) / sigma_cond)))
 
-    left = min(-50.0, float(np.min(yi)) - 20 * mu_prior_sd)
-    right = max(50.0, float(np.max(yi)) + 20 * mu_prior_sd)
-    q025 = brentq(lambda x: cdf_mu(x) - .025, left, right)
-    q50 = brentq(lambda x: cdf_mu(x) - .5, left, right)
-    q975 = brentq(lambda x: cdf_mu(x) - .975, left, right)
+def _mixture_cdf(x: float, centers: np.ndarray, sigmas: np.ndarray,
+                 weights: np.ndarray) -> float:
+    return float(np.sum(weights * ndtr((x - centers) / sigmas)))
+
+
+def _mixture_quantile(prob: float, centers: np.ndarray, sigmas: np.ndarray,
+                      weights: np.ndarray) -> float:
+    left = float(np.min(centers - 15 * sigmas))
+    right = float(np.max(centers + 15 * sigmas))
+    return float(brentq(
+        lambda x: _mixture_cdf(x, centers, sigmas, weights) - prob, left, right))
+
+
+def fit_bayesian(frame: pd.DataFrame, threshold: float = -2.0,
+                 mu_prior_sd: float = 5.0, tau_prior_sd: float = 2.0,
+                 grid_size: int = 2001) -> BayesResult:
+    """Bayesian random-effects posterior and true-effect predictive distribution.
+
+    theta_new describes the true effect in a new implementation, not a noisy
+    future study estimate. Includes heterogeneity and parameter uncertainty.
+    """
+    grid = _bayesian_tau_grid(frame, mu_prior_sd, tau_prior_sd, grid_size)
+    pred_sd = np.sqrt(grid.sd_mu**2 + grid.tau**2)
+    cdf_mu = lambda x: _mixture_cdf(x, grid.mu, grid.sd_mu, grid.weight)
+    cdf_pred = lambda x: _mixture_cdf(x, grid.mu, pred_sd, grid.weight)
     return BayesResult(
-        mean=float(np.sum(normalized * mu_cond)),
-        median=float(q50), ci_low=float(q025), ci_high=float(q975),
+        mean=float(np.sum(grid.weight * grid.mu)),
+        median=_mixture_quantile(.5, grid.mu, grid.sd_mu, grid.weight),
+        ci_low=_mixture_quantile(.025, grid.mu, grid.sd_mu, grid.weight),
+        ci_high=_mixture_quantile(.975, grid.mu, grid.sd_mu, grid.weight),
         p_benefit=cdf_mu(0), p_relevant=cdf_mu(threshold),
-        tau_mean=float(np.sum(normalized * taus)),
+        tau_mean=float(np.sum(grid.weight * grid.tau)),
         mu_prior_sd=mu_prior_sd, tau_prior_sd=tau_prior_sd,
         threshold=threshold,
+        pred_ci_low=_mixture_quantile(.025, grid.mu, pred_sd, grid.weight),
+        pred_ci_high=_mixture_quantile(.975, grid.mu, pred_sd, grid.weight),
+        p_pred_benefit=cdf_pred(0), p_pred_relevant=cdf_pred(threshold),
     )
 
 
-def bayesian_density(frame: pd.DataFrame, mu_prior_sd=5.0, tau_prior_sd=2.0,
-                     x_min=-4.5, x_max=2.5, points=450) -> pd.DataFrame:
-    """Marginal posterior density of overall mean, returned for Plotly."""
-    effects = calculate_effects(frame)
-    yi, vi = effects["yi"].to_numpy(float), effects["vi"].to_numpy(float)
-    taus = np.linspace(0, max(10.0, 9 * tau_prior_sd, np.ptp(yi) * 5), 2001)
-    vtot = vi[None, :] + taus[:, None] ** 2
-    w = 1.0 / vtot
-    A = w.sum(axis=1) + 1 / mu_prior_sd**2
-    B = (w * yi[None, :]).sum(axis=1)
-    mus, sigmas = B / A, np.sqrt(1 / A)
-    logev = -.5 * (len(yi) * np.log(2 * np.pi) + np.log(vtot).sum(axis=1) +
-                    np.log(mu_prior_sd**2 * A) + (w * yi[None, :]**2).sum(axis=1) - B**2 / A)
-    logprior = np.log(np.sqrt(2 / np.pi) / tau_prior_sd) - .5 * (taus / tau_prior_sd)**2
-    endweights = np.ones(len(taus))
-    endweights[[0, -1]] = .5
-    weight = np.exp(logev + logprior + np.log(endweights) -
-                    logsumexp(logev + logprior + np.log(endweights)))
+def bayesian_density(frame: pd.DataFrame, mu_prior_sd: float = 5.0,
+                     tau_prior_sd: float = 2.0, x_min: float | None = None,
+                     x_max: float | None = None, points: int = 450,
+                     threshold: float = -2.0) -> pd.DataFrame:
+    """Marginal posterior for mu; adaptive bounds show credible tails."""
+    grid = _bayesian_tau_grid(frame, mu_prior_sd, tau_prior_sd)
+    if points < 2:
+        raise ValueError("At least two density points are required.")
+    if x_min is None or x_max is None:
+        left = _mixture_quantile(.001, grid.mu, grid.sd_mu, grid.weight)
+        right = _mixture_quantile(.999, grid.mu, grid.sd_mu, grid.weight)
+        span = max(1.0, right - left)
+        if x_min is None:
+            x_min = min(left - span * .1, threshold, 0.0)
+        if x_max is None:
+            x_max = max(right + span * .1, 0.0, threshold)
+    if not (np.isfinite(x_min) and np.isfinite(x_max) and x_min < x_max):
+        raise ValueError("Density axis bounds must be finite and increasing.")
     x = np.linspace(x_min, x_max, points)
-    density = np.sum(weight[:, None] * norm.pdf(x[None, :], mus[:, None], sigmas[:, None]), axis=0)
+    density = np.sum(grid.weight[:, None] * norm.pdf(
+        x[None, :], grid.mu[:, None], grid.sd_mu[:, None]), axis=0)
     return pd.DataFrame({"MD": x, "Posterior density": density})
