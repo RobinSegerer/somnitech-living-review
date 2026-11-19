@@ -15,6 +15,13 @@ from src.explanations import LAB_EXPERIMENTS, VERSION_GUIDE
 from src.plots import BLUE, forest_plot, history_plot, posterior_plot, updating_plot
 from src.updating import build_updating_story
 
+st.set_page_config(
+    page_title="SomniTech | Living Evidence Lab",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
 
 @st.cache_data(show_spinner=False)
 def cached_snapshot(version_name: str):
@@ -78,12 +85,6 @@ def canonical_forest_range(clinical_threshold: float):
     pad = max(0.75, .05 * (right - left))
     return (left - pad, right + pad)
 
-st.set_page_config(
-    page_title="SomniTech | Living Evidence Lab",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 st.markdown("""
 <style>
   .block-container {padding-top: 2.3rem; padding-bottom: 3rem; max-width: 1330px;}
