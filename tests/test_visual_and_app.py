@@ -64,6 +64,23 @@ def test_updating_tracks_tau_mean():
     assert v2.posterior_tau_mean > v2.prior_tau_mean
 
 
+def test_forest_plot_interface_matches_streamlit_caller():
+    from inspect import signature
+    from src.plots import PLOT_INTERFACE_VERSION, forest_plot
+    assert PLOT_INTERFACE_VERSION == "forest-2026-11-v3"
+    expected = {"highlight_phase", "highlight_ids", "previous_effects", "threshold", "x_range"}
+    assert expected.issubset(signature(forest_plot).parameters)
+
+
+def test_streamlit_application_renders_all_review_versions():
+    """Test all version-specific forest plots, including the V4 correction."""
+    from streamlit.testing.v1 import AppTest
+    app = AppTest.from_file(Path(__file__).resolve().parents[1] / "app.py", default_timeout=120).run()
+    assert len(app.exception) == 0, [str(x.message) for x in app.exception]
+    for version in ("V1", "V2", "V3", "V4"):
+        app.sidebar.select_slider[0].set_value(version).run()
+        assert len(app.exception) == 0, [f'{version}: {x.message}' for x in app.exception]
+
 def test_streamlit_application_smoke_render():
     """Run the UI without a browser to catch widget and runtime regressions."""
     from streamlit.testing.v1 import AppTest
