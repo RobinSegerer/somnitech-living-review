@@ -868,7 +868,7 @@ with section_workflow:
     monitoring = load_illustrative_monitoring()
     activity = monitoring.loc[monitoring["version"] == version].copy()
     m1, m2, m3 = st.columns(3)
-    m1.metric("Records screened", f"{int(activity["screened"].sum()):,}")
+    m1.metric("Records screened", f"{int(activity['screened'].sum()):,}")
     m2.metric("Full texts assessed", str(int(activity["full_texts"].sum())))
     m3.metric("New RCTs included", str(int(activity["included"].sum())))
     if version == "V4":
@@ -894,8 +894,8 @@ with section_workflow:
     )]
     st.caption(
         f"Illustrative cumulative workload through {version}: "
-        f"{int(cumulative["screened"].sum()):,} records screened, "
-        f"{int(cumulative["full_texts"].sum())} full texts assessed. "
+        f"{int(cumulative['screened'].sum()):,} records screened, "
+        f"{int(cumulative['full_texts'].sum())} full texts assessed. "
         "No study is double-counted in the statistical snapshots."
     )
     st.divider()
