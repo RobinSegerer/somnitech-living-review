@@ -26,8 +26,9 @@ if (
 ):
     _plots_module = importlib.reload(_plots_module)
 
-from src.plots import BLUE, forest_plot, history_plot, posterior_plot, updating_plot
+from src.plots import BLUE, forest_plot, history_plot, posterior_plot, updating_plot, weight_comparison_plot
 from src.updating import build_updating_story
+from src.teaching import compare_weights, bonferroni_limits, add_file_drawer_trials, load_illustrative_monitoring
 
 st.set_page_config(
     page_title="SomniTech | Living Evidence Lab",
@@ -48,13 +49,13 @@ def cached_frequentist_v2(version_name: str):
 
 
 @st.cache_data(show_spinner=False)
-def cached_history():
+def cached_history_v2():
     rows = []
     for name in VERSIONS:
         fit_at_version = fit_random_effects(snapshot(name))
         rows.append(dict(version=name, date=VERSION_METADATA[name]["date"],
                          k=fit_at_version.k, n_total=fit_at_version.n_total,
-                         mean=fit_at_version.mean, ci_low=fit_at_version.ci_low,
+                         mean=fit_at_version.mean, se_hk=fit_at_version.se_hk, ci_low=fit_at_version.ci_low,
                          ci_high=fit_at_version.ci_high, i2=fit_at_version.i2,
                          tau2=fit_at_version.tau2))
     return pd.DataFrame(rows)
@@ -140,7 +141,7 @@ with st.sidebar:
 frame = cached_snapshot(version)
 fit = cached_frequentist_v2(version)
 effects = calculate_effects(frame)
-history = cached_history()
+history = cached_history_v2()
 prev_version = VERSIONS[VERSIONS.index(version) - 1] if version != "V0" else None
 prev_fit = cached_frequentist_v2(prev_version) if prev_version else None
 
@@ -196,7 +197,8 @@ with section_review:
     st.divider()
     st.subheader("Evidence snapshot · " + version)
     guide = VERSION_GUIDE[version]
-    st.markdown(f"**Guiding question: {guide['question']}**")
+    st.markdown(f"**Before interpreting the update, predict:** {guide['question']}")
+    st.caption("Examine the estimates and forest plot before opening the interpretation.")
     st.caption("The following metrics reflect only the selected fictional evidence snapshot.")
     a,b,c,d = st.columns(4)
     a.metric("Studies", f"{fit.k}", delta=f"{fit.k-prev_fit.k:+d}" if prev_fit else None, delta_color="off")
@@ -267,24 +269,70 @@ with section_review:
                 "confidence interval, and weight."
             )
     with col_side:
-        st.markdown("#### What changed?")
-        st.info(meta["description"])
-        st.write("**What does this version show?**")
-        st.write(guide["observation"])
-        st.write("**What should you look for?**")
-        st.caption(guide["try_this"])
-        st.write("**Statistical interpretation**")
-        if fit.ci_high < 0:
-            st.success("The 95% confidence interval lies entirely below zero. Under the selected model, the pooled MD differs statistically from zero.")
-        else:
-            st.warning("The 95% confidence interval includes zero; the data remain compatible with no average effect.")
-        if fit.i2 > 75:
-            st.warning("Very high heterogeneity: the pooled MD alone may not adequately describe the variation across studies.")
-        st.caption("Statistical significance does not establish clinical importance or high certainty of evidence.")
+        st.markdown("#### Think first")
+        st.write("Does this update strengthen, weaken, or leave unchanged the case for a benefit?")
+        st.caption("Make your prediction before opening the explanation.")
+        with st.expander("Reveal interpretation", expanded=False):
+            st.info(meta["description"])
+            st.write("**What does this version show?**")
+            st.write(guide["observation"])
+            st.write("**What should you look for?**")
+            st.caption(guide["try_this"])
+            st.write("**Statistical interpretation**")
+            if fit.ci_high < 0:
+                st.success("The 95% confidence interval lies entirely below zero under the selected model.")
+            else:
+                st.warning("The 95% confidence interval includes zero; no average effect remains compatible with these data.")
+            if fit.i2 > 75:
+                st.warning("Very high heterogeneity: one average effect may poorly represent the individual studies.")
+            st.caption("Statistical significance does not establish clinical importance or high certainty of evidence.")
+
+    if st.toggle("Compare fixed-effect (common-effect) vs. random-effects weights",
+                 key="compare_review_weights"):
+        st.write(
+            "**Predict first:** Will the largest trial still dominate when τ² grows? "
+            "Common-effect weights use 1/vᵢ, while random-effects weights use 1/(vᵢ + τ²). "
+            "Between-study heterogeneity typically makes the weights more similar."
+        )
+        review_weights = compare_weights(frame, fit)
+        st.plotly_chart(weight_comparison_plot(review_weights),
+                        width="stretch", key=f"weights_{version}")
+        with st.expander("Inspect the exact weights"):
+            st.dataframe(
+                review_weights.style.format({
+                    "Common-effect (%)": "{:.1f}",
+                    "Random-effects (%)": "{:.1f}",
+                    "Change (pp)": "{:+.1f}",
+                }),
+                hide_index=True, width="stretch",
+            )
+        st.caption(
+            f"Version {version}: estimated τ² = {fit.tau2:.3f}. "
+            "These are relative weights, not an assessment of study quality. "
+            "A common-effect analysis assumes one shared true effect; the random-effects "
+            "model allows true study effects to vary."
+        )
 
     st.markdown("#### How has the evidence changed?")
-    st.plotly_chart(history_plot(history, selected=version, threshold=threshold),
-                    width="stretch", key="history_plot")
+    show_peeking = st.toggle(
+        "Illustrate repeated testing: show conservative Bonferroni intervals",
+        key="show_repeated_look_intervals",
+        help="Hypothetical five-look familywise adjustment, not a registered alpha-spending plan.",
+    )
+    adjusted_history = bonferroni_limits(history) if show_peeking else None
+    st.plotly_chart(
+        history_plot(history, selected=version, threshold=threshold, adjusted=adjusted_history),
+        width="stretch", key="history_plot",
+    )
+    if show_peeking:
+        st.info(
+            f"**Teaching illustration only:** Treating all {len(history)} versions as "
+            f"preplanned looks gives α = .05/{len(history)} = {.05/len(history):.3f} "
+            f"per look, i.e. {(1-.05/len(history)):.0%} individual intervals "
+            "(purple dotted bars). This is a conservative Bonferroni comparison, "
+            "**not a genuine prospective alpha-spending or group-sequential design**. "
+            "It does not correct publication bias or model misspecification."
+        )
     st.caption(
         "Each row shows the pooled effect for one review version, with its "
         "95% confidence interval. The dashed zero line denotes no difference; "
