@@ -26,7 +26,7 @@ Streamlit normally opens the app at `http://localhost:8501`. Stop the server wit
 
 Start with the fictional PICO question: does the SomniTech digital insomnia intervention lower the **Insomnia Severity Index (ISI)** at eight weeks compared with general sleep-hygiene advice?
 
-Select **V0–V4** in the sidebar. The introductory **Case & PICO** section is expanded for V0 and collapsed for later versions to reduce scrolling. Observe the pooled mean difference (MD), its 95% confidence interval (CI), between-study heterogeneity, and the forest plot. The study plots use a common x-axis across all review versions, and their summary metrics display changes since the previous version. New trials appear as orange circles; **S06 in V4 appears as a red diamond with a grey X showing the superseded estimate**. A dotted green line under the pooled diamond shows the approximate 95% prediction interval. Each version offers a guiding question, interpretation, and suggested activity. A low-risk-of-bias sensitivity analysis is available.
+Select **V0–V4** in the sidebar. The introductory **Case & PICO** section is expanded for V0 and collapsed for later versions to reduce scrolling. Observe the pooled mean difference (MD), its 95% confidence interval (CI), between-study heterogeneity, and the forest plot. The study plots use a common x-axis across all review versions, and their summary metrics display changes since the previous version. New trials appear as orange circles; **S06 in V4 appears as a red diamond with a grey X showing the superseded estimate**. A dotted green line under the pooled diamond shows the approximate 95% prediction interval. Each version prompts students to **predict before revealing** the interpretation. An optional common-effect versus random-effects weight chart shows why large studies lose some relative dominance when heterogeneity rises. A separate toggle overlays **illustrative Bonferroni-adjusted intervals** across five hypothetical looks (0.05/5 per look): this is a teaching sensitivity analysis, not a prospective alpha-spending strategy. A low-risk-of-bias sensitivity analysis is also available.
 
 The effect is the **difference between follow-up means**, not a within-person change from baseline. A negative MD favours SomniTech.
 
@@ -43,6 +43,8 @@ Three guided activities show how to:
 These changes are session-local: they do not modify the canonical CSV files or the historical review versions.
 
 **New lab controls:** An **Include** checkbox supports leave-one-out and other exclusion-based sensitivity analyses. Group means are restricted to the valid ISI range (0–28), edited data are validated before reanalysis, and an optional toggle shows how the Bayesian probability P(μ below the threshold) changes. Exported experimental data retain each study's Include status.
+
+**File-drawer exercise:** A button adds **two explicitly hypothetical, unpublished null-effect trials** (500 participants per arm, means 12 vs 12, SD 4). Compare the recalculated results, then Reset. The preset illustrates a potential consequence of missing null studies; it does **not** estimate publication bias or claim that such studies really exist. Clicking it twice does not duplicate trials.
 
 ### 03 · Frequentist vs. Bayesian
 
@@ -71,6 +73,8 @@ A probability table compares **P(μ < 0)** and **P(μ < the chosen illustrative 
 ### 04 · Workflow & Data
 
 Explore the steps of a living review—surveillance, screening, extraction and quality assurance, reanalysis, and publication. Review the synthetic event log and export versioned datasets, event records, and pooled estimates.
+
+**Monitoring workload and governance:** An explicitly fictional, internally consistent PRISMA-like activity table shows identified records, screened abstracts, assessed full texts, and included trials for each simulated search. V0 includes an update with zero eligible new trials; V4 is a data correction without a search. Neither constitutes a real search history or an official PRISMA 2020 flow. Version-specific examples explain why an editorial team might publish an update. A retirement checklist asks about evidence certainty, ongoing registered trials, and decision relevance; their default states are **not assessed/unknown**, never inferred from the meta-analysis. Learners can explore hypothetical editorial decisions, but no actual GRADE or registry checks are performed.
 
 ## Suggested guided tour
 
@@ -110,10 +114,12 @@ The statistical engine in `src/analysis.py` is independent of Streamlit and is c
 app.py                       Streamlit entry point and navigation
 data/studies.csv             Versioned fictional trial data
 data/events.csv              Monitoring and review update event log
+data/monitoring.csv          Invented screening and monitoring counts
 src/data.py                  Historical review snapshots
 src/analysis.py              Frequentist and Bayesian models
 src/plots.py                 Forest, history, and posterior charts
 src/explanations.py          Educational guidance and laboratory exercises
+src/teaching.py              Weight comparisons and fictional didactic scenarios
 tests/                       Automated regression and guidance tests
 validation/                  Optional R/metafor comparison
 requirements.txt             Application dependencies
