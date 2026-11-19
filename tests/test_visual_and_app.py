@@ -86,3 +86,26 @@ def test_streamlit_application_smoke_render():
     from streamlit.testing.v1 import AppTest
     app = AppTest.from_file(Path(__file__).resolve().parents[1] / "app.py", default_timeout=120).run()
     assert len(app.exception) == 0, [str(x.message) for x in app.exception]
+
+
+def test_optional_teaching_toggles_render_without_errors():
+    """Exercise the weight and repeated-look plots, not only their default state."""
+    from streamlit.testing.v1 import AppTest
+    app = AppTest.from_file(Path(__file__).resolve().parents[1] / "app.py", default_timeout=120).run()
+    assert not app.exception, [str(e.message) for e in app.exception]
+    for key in ("compare_review_weights", "show_repeated_look_intervals"):
+        widget = next(x for x in app.toggle if x.key == key)
+        widget.set_value(True).run()
+        assert not app.exception, [f"{key}: {e.message}" for e in app.exception]
+
+
+def test_file_drawer_button_runs_and_preserves_include_flags():
+    from streamlit.testing.v1 import AppTest
+    app = AppTest.from_file(Path(__file__).resolve().parents[1] / "app.py", default_timeout=120).run()
+    button = next(b for b in app.button if b.key == "add_file_drawer_preset")
+    button.click().run()
+    assert not app.exception, [str(e.message) for e in app.exception]
+    data = app.session_state["exp_frame"]
+    assert len(data.loc[data["study_id"].astype(str).str.startswith("FD-")]) == 2
+    assert "include" in data.columns
+
