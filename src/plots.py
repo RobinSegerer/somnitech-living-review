@@ -57,7 +57,7 @@ def forest_plot(frame: pd.DataFrame, fit: MetaResult, title: str = "Forest plot"
                 hovertemplate=(f"<b>{row['author_year']}</b><br>Previously extracted MD "
                                f"{old_row['yi']:.2f}<br>Replaced in V4<extra></extra>"),
             ))
-    if fit.pi_low is not None and fit.pi_high is not None:
+    if getattr(fit, 'pi_low', None) is not None and getattr(fit, 'pi_high', None) is not None:
         fig.add_trace(go.Scatter(
             x=[fit.pi_low, fit.pi_high], y=[-.55, -.55],
             mode="lines", line=dict(color=GREEN, dash="dot", width=3),
