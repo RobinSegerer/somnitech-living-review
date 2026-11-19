@@ -125,7 +125,7 @@ with st.sidebar:
     meta = VERSION_METADATA[version]
     st.caption(f"{meta['date']} · {meta['type']}")
     st.markdown(f"**{meta['title']}**")
-    st.write(meta["description"])
+    st.caption("Interpretations are hidden until you reveal them in Living Review.")
     st.divider()
     threshold = st.number_input(
         "Illustrative relevance threshold (ISI points)", value=-2.0,
@@ -897,6 +897,23 @@ with section_workflow:
         f"{int(cumulative['screened'].sum()):,} records screened, "
         f"{int(cumulative['full_texts'].sum())} full texts assessed. "
         "No study is double-counted in the statistical snapshots."
+    )
+    st.divider()
+    st.markdown("#### Publication trigger · why release a new version?")
+    publication_explanations = {
+        "V0": "Initial review published. A later monitoring-only search found no new eligible RCTs, so it was documented without publishing a new synthesis.",
+        "V1": "Two eligible new trials materially changed the estimated effect and its uncertainty; an editorial reassessment triggered publication.",
+        "V2": "Contradictory large trials substantially changed the interpretation and increased heterogeneity; publication documents that revision.",
+        "V3": "Four additional trials changed the overall evidence profile; the updated assessment warranted publication in this fictional scenario.",
+        "V4": "A corrected outcome from an already included trial changed the synthesis; the correction and revised conclusions were published.",
+    }
+    st.info(publication_explanations[version])
+    st.caption(
+        "Illustrative editorial principle: monitoring does not automatically mean "
+        "publication. A new version may be justified by a consequential change in "
+        "estimates, evidence certainty, applicability, or corrected data. Triggers "
+        "and update schedules should be specified in the review protocol; "
+        "statistical significance alone is not an automatic publication trigger."
     )
     st.divider()
     st.markdown("#### Retirement check · should this living review remain active?")
