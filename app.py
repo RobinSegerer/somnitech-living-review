@@ -860,6 +860,100 @@ with section_workflow:
                            ("1 · Surveillance", "2 · Screening", "3 · Extraction & QA",
                             "4 · Reanalysis", "5 · Publication")):
         column.info(txt)
+    st.markdown("#### Monitoring workload · synthetic PRISMA-like counts")
+    st.caption(
+        "These are invented records for a teaching exercise, not actual searches, "
+        "screening decisions, trial registries, or a complete PRISMA 2020 flow."
+    )
+    monitoring = load_illustrative_monitoring()
+    activity = monitoring.loc[monitoring["version"] == version].copy()
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Records screened", f"{int(activity["screened"].sum()):,}")
+    m2.metric("Full texts assessed", str(int(activity["full_texts"].sum())))
+    m3.metric("New RCTs included", str(int(activity["included"].sum())))
+    if version == "V4":
+        st.info(
+            "V4 represents a data correction, not a search update: no new records "
+            "were screened and no new RCT entered the synthesis."
+        )
+    if version == "V0":
+        st.caption(
+            "V0 also includes a later monitoring run with no newly eligible RCTs: "
+            "searches can require effort even when no review version changes."
+        )
+    st.dataframe(
+        activity.rename(columns={
+            "version": "Review version", "search_date": "Search / event date",
+            "activity": "Activity", "identified": "Identified",
+            "screened": "Screened", "full_texts": "Full texts",
+            "included": "New RCTs",
+        }), hide_index=True, width="stretch",
+    )
+    cumulative = monitoring.loc[monitoring["version"].isin(
+        list(VERSIONS[:VERSIONS.index(version) + 1])
+    )]
+    st.caption(
+        f"Illustrative cumulative workload through {version}: "
+        f"{int(cumulative["screened"].sum()):,} records screened, "
+        f"{int(cumulative["full_texts"].sum())} full texts assessed. "
+        "No study is double-counted in the statistical snapshots."
+    )
+    st.divider()
+    st.markdown("#### Retirement check · should this living review remain active?")
+    st.write(
+        "Three practical questions need a documented editorial decision. "
+        "The statistical analysis cannot answer them by itself."
+    )
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("**Evidence certainty**")
+        st.caption("Not assessed · no GRADE evaluation is simulated")
+    with c2:
+        st.markdown("**Ongoing research**")
+        st.caption("Unknown · no trial registry has been searched")
+    with c3:
+        st.markdown("**Decision relevance**")
+        st.caption("Unverified · assumed relevant for this teaching case")
+    st.info(
+        "On the information available in this fictional exercise, retirement "
+        "cannot be justified. V4 illustrates why fixing data is not, by itself, "
+        "a reason to end surveillance."
+    )
+    with st.expander("Try a hypothetical editorial retirement decision"):
+        certainty = st.selectbox(
+            "Has a separate certainty assessment established sufficient evidence?",
+            ["Not assessed", "Yes", "No"], key="governance_certainty",
+        )
+        ongoing = st.selectbox(
+            "Have trial registries been checked for relevant ongoing trials?",
+            ["Not checked", "None identified after checking", "Relevant trials ongoing"],
+            key="governance_registry",
+        )
+        relevance = st.selectbox(
+            "Does the review question remain relevant for decisions?",
+            ["Not formally assessed", "Yes", "No"], key="governance_relevance",
+        )
+        if relevance == "No":
+            st.warning(
+                "Consider retiring the review because the question is no longer "
+                "decision-relevant, subject to documented stakeholder review."
+            )
+        elif (certainty == "Yes" and ongoing == "None identified after checking"
+              and relevance == "Yes"):
+            st.success(
+                "Retirement could be considered after protocol-specific review "
+                "and editorial approval; it is not automatic even with high certainty."
+            )
+        else:
+            st.info(
+                "Continue monitoring provisionally or complete the missing "
+                "assessments; the hypothetical criteria do not yet justify retirement."
+            )
+        st.caption(
+            "Your selections are hypothetical and do not update the underlying "
+            "fictitious evidence or represent real Cochrane decisions."
+        )
+    st.divider()
     events = load_events()
     allowed = list(VERSIONS[:VERSIONS.index(version)+1])
     events = events[events["version"].isin(allowed)]
