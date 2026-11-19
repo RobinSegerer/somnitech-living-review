@@ -12,6 +12,20 @@ from src.analysis import (
 )
 from src.data import VERSION_METADATA, VERSIONS, load_events, snapshot
 from src.explanations import LAB_EXPERIMENTS, VERSION_GUIDE
+# Streamlit Cloud can rerun an updated app.py while retaining an older
+# src.plots module. Reload only when the interface is out of date.
+import importlib
+import inspect
+import src.plots as _plots_module
+
+_EXPECTED_PLOT_INTERFACE = "forest-2026-11-v3"
+_REQUIRED_FOREST_PARAMS = {"highlight_phase", "highlight_ids", "previous_effects", "threshold", "x_range"}
+if (
+    getattr(_plots_module, "PLOT_INTERFACE_VERSION", None) != _EXPECTED_PLOT_INTERFACE
+    or not _REQUIRED_FOREST_PARAMS.issubset(inspect.signature(_plots_module.forest_plot).parameters)
+):
+    _plots_module = importlib.reload(_plots_module)
+
 from src.plots import BLUE, forest_plot, history_plot, posterior_plot, updating_plot
 from src.updating import build_updating_story
 
