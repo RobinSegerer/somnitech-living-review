@@ -26,7 +26,7 @@ Streamlit normally opens the app at `http://localhost:8501`. Stop the server wit
 
 Start with the fictional PICO question: does the SomniTech digital insomnia intervention lower the **Insomnia Severity Index (ISI)** at eight weeks compared with general sleep-hygiene advice?
 
-Select **V0–V4** in the sidebar. Observe the pooled mean difference (MD), its 95% confidence interval (CI), between-study heterogeneity, and the forest plot. Newly included studies are highlighted. Each version offers a guiding question, an interpretation of the results, and a suggested activity. A low-risk-of-bias sensitivity analysis is available.
+Select **V0–V4** in the sidebar. The introductory **Case & PICO** section is expanded for V0 and collapsed for later versions to reduce scrolling. Observe the pooled mean difference (MD), its 95% confidence interval (CI), between-study heterogeneity, and the forest plot. The study plots use a common x-axis across all review versions, and their summary metrics display changes since the previous version. New trials appear as orange circles; **S06 in V4 appears as a red diamond with a grey X showing the superseded estimate**. A dotted green line under the pooled diamond shows the approximate 95% prediction interval. Each version offers a guiding question, interpretation, and suggested activity. A low-risk-of-bias sensitivity analysis is available.
 
 The effect is the **difference between follow-up means**, not a within-person change from baseline. A negative MD favours SomniTech.
 
@@ -42,6 +42,8 @@ Three guided activities show how to:
 
 These changes are session-local: they do not modify the canonical CSV files or the historical review versions.
 
+**New lab controls:** An **Include** checkbox supports leave-one-out and other exclusion-based sensitivity analyses. Group means are restricted to the valid ISI range (0–28), edited data are validated before reanalysis, and an optional toggle shows how the Bayesian probability P(μ below the threshold) changes. Exported experimental data retain each study's Include status.
+
 ### 03 · Frequentist vs. Bayesian
 
 Use **the same study data** for both approaches and compare their interpretation of uncertainty.
@@ -51,6 +53,8 @@ Use **the same study data** for both approaches and compare their interpretation
 
 The page explains priors, posterior distributions, the difference between confidence and credible intervals, and how results evolve over versions. Old studies are **not counted twice**: every Bayesian snapshot uses the original prior and the full valid evidence available at that time.
 
+**Prediction versus estimation:** The frequentist panel also reports an approximate 95% prediction interval (when at least three studies are available). The Bayesian panel reports a 95% posterior-predictive interval for the **true effect in a new setting** θ_new, together with P(θ_new < 0) and P(θ_new below the illustrative threshold). These predictions incorporate between-setting heterogeneity; they are not uncertainty intervals for the pooled mean μ or predictions of a noisy future trial estimate.
+
 #### Interactive Bayesian updating (new)
 
 A guided selector for **V0–V4** shows how the posterior from the preceding review version becomes the prior for the next evidence update. A Plotly chart includes:
@@ -59,7 +63,7 @@ A guided selector for **V0–V4** shows how the posterior from the preceding rev
 - **Orange dotted:** a peak-scaled **relative updating factor** for μ, indicating which values gain or lose support. This is **not a probability density** and uses its own right-hand vertical axis. It accounts for uncertainty about heterogeneity τ through the previous joint model.
 - **Green:** posterior after including the new evidence.
 
-A probability table compares **P(μ < 0)** and **P(μ < the chosen illustrative threshold)** before and after each step. V1–V3 incorporate newly added trials. V4 demonstrates that a correction is different: the incorrect S06 contribution must be **removed and replaced**, rather than adding the corrected data as another independent trial.
+A probability table compares **P(μ < 0)** and **P(μ < the chosen illustrative threshold)** before and after each step. It now also displays the change in the posterior mean of the **between-study standard deviation τ**, making the joint updating process easier to understand. V1–V3 incorporate newly added trials. V4 demonstrates that a correction is different: the incorrect S06 contribution must be **removed and replaced**, rather than adding the corrected data as another independent trial.
 
 **Why full reanalysis is still correct:** With unchanged model and priors, recomputing each complete evidence snapshot under the same original joint prior is algebraically equivalent to sequentially updating the **joint** p(μ, τ) posterior. It is generally *not* sufficient to carry forward only the marginal distribution of μ when τ is also uncertain.
 
