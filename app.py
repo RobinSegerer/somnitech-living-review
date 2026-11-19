@@ -15,6 +15,69 @@ from src.explanations import LAB_EXPERIMENTS, VERSION_GUIDE
 from src.plots import BLUE, forest_plot, history_plot, posterior_plot, updating_plot
 from src.updating import build_updating_story
 
+
+@st.cache_data(show_spinner=False)
+def cached_snapshot(version_name: str):
+    return snapshot(version_name)
+
+
+@st.cache_data(show_spinner=False)
+def cached_frequentist(version_name: str):
+    return fit_random_effects(snapshot(version_name))
+
+
+@st.cache_data(show_spinner=False)
+def cached_history():
+    rows = []
+    for name in VERSIONS:
+        fit_at_version = fit_random_effects(snapshot(name))
+        rows.append(dict(version=name, date=VERSION_METADATA[name]["date"],
+                         k=fit_at_version.k, n_total=fit_at_version.n_total,
+                         mean=fit_at_version.mean, ci_low=fit_at_version.ci_low,
+                         ci_high=fit_at_version.ci_high, i2=fit_at_version.i2,
+                         tau2=fit_at_version.tau2))
+    return pd.DataFrame(rows)
+
+
+@st.cache_data(show_spinner=False)
+def cached_bayesian(version_name: str, clinical_threshold: float,
+                    effect_prior_sd: float, heterogeneity_prior_sd: float):
+    return fit_bayesian(snapshot(version_name), threshold=clinical_threshold,
+                        mu_prior_sd=effect_prior_sd,
+                        tau_prior_sd=heterogeneity_prior_sd)
+
+
+@st.cache_data(show_spinner=False)
+def cached_density(version_name: str, clinical_threshold: float,
+                   effect_prior_sd: float, heterogeneity_prior_sd: float):
+    return bayesian_density(snapshot(version_name), threshold=clinical_threshold,
+                            mu_prior_sd=effect_prior_sd,
+                            tau_prior_sd=heterogeneity_prior_sd)
+
+
+@st.cache_data(show_spinner=False)
+def cached_updating(version_name: str, clinical_threshold: float,
+                    effect_prior_sd: float, heterogeneity_prior_sd: float):
+    return build_updating_story(version_name, threshold=clinical_threshold,
+                                mu_prior_sd=effect_prior_sd,
+                                tau_prior_sd=heterogeneity_prior_sd)
+
+
+@st.cache_data(show_spinner=False)
+def canonical_forest_range(clinical_threshold: float):
+    extent = [0.0, clinical_threshold]
+    for name in VERSIONS:
+        effects_at_version = calculate_effects(snapshot(name))
+        fit_at_version = fit_random_effects(snapshot(name))
+        extent.extend(effects_at_version["ci_low"].tolist())
+        extent.extend(effects_at_version["ci_high"].tolist())
+        extent.extend([fit_at_version.ci_low, fit_at_version.ci_high])
+        if fit_at_version.pi_low is not None:
+            extent.extend([fit_at_version.pi_low, fit_at_version.pi_high])
+    left, right = min(extent), max(extent)
+    pad = max(0.75, .05 * (right - left))
+    return (left - pad, right + pad)
+
 st.set_page_config(
     page_title="SomniTech | Living Evidence Lab",
     page_icon="📊",
@@ -59,16 +122,12 @@ with st.sidebar:
     st.caption("Random-effects model; REML for τ²; modified Hartung–Knapp intervals using t(k−1). I² based on Cochran's Q.")
     st.caption("Bayesian analysis: normal–normal hierarchical model; priors can be adjusted in the methods comparison.")
 
-frame = snapshot(version)
-fit = fit_random_effects(frame)
+frame = cached_snapshot(version)
+fit = cached_frequentist(version)
 effects = calculate_effects(frame)
-history_rows = []
-for v in VERSIONS:
-    model = fit_random_effects(snapshot(v))
-    history_rows.append(dict(version=v, date=VERSION_METADATA[v]["date"],
-                             k=model.k, mean=model.mean, ci_low=model.ci_low,
-                             ci_high=model.ci_high, i2=model.i2, tau2=model.tau2))
-history = pd.DataFrame(history_rows)
+history = cached_history()
+prev_version = VERSIONS[VERSIONS.index(version) - 1] if version != "V0" else None
+prev_fit = cached_frequentist(prev_version) if prev_version else None
 
 section_review, section_lab, section_methods, section_workflow = st.tabs([
     "01 · Living Review", "02 · Experiment Lab",
@@ -76,58 +135,67 @@ section_review, section_lab, section_methods, section_workflow = st.tabs([
 ])
 
 with section_review:
-    st.subheader("The fictional case: Does the SomniTech sleep app work?")
-    st.write(
-        "A research team wants to know whether a **fictional digital sleep intervention** "
-        "works better for adults with insomnia than standard "
-        "**sleep-hygiene advice**. The review includes only "
-        "randomised controlled trials (RCTs). Over time, "
-        "new studies become available, and an incorrectly extracted outcome is later corrected. "
-        "Follow how these events change the evidence."
-    )
-    st.markdown("**The research question (PICO)**")
-    p1, p2 = st.columns(2, gap="large")
-    with p1:
-        st.markdown("**P – Population:** Adults with insomnia  \n**I – Intervention:** digital app *SomniTech*")
-    with p2:
-        st.markdown("**C – Comparator:** general sleep-hygiene advice  \n**O – Outcome:** Insomnia Severity Index (ISI) at eight weeks")
-    st.markdown(
-        "**What is being compared?** ISI scores range from 0 to 28; lower scores "
-        "indicate fewer insomnia symptoms. We analyse the **mean difference "
-        "in ISI scores at eight weeks** (intervention minus control), "
-        "not changes from baseline within individual participants. "
-        "An MD of **−2** means that, on average, the intervention group "
-        "scores two ISI points lower than the control group. The adjustable "
-        "threshold of −2 is an **illustrative teaching assumption**, not a validated "
-        "threshold for a clinically meaningful difference."
-    )
-    st.info(
-        "**Getting started:** Select **V0** in the sidebar and inspect the forest plot. "
-        "Then move through **V1–V4**: What happens to the pooled estimate, "
-        "confidence interval, and heterogeneity? Studies shown in orange "
-        "are newly included. Use the sidebar threshold to "
-        "explore different illustrative levels of clinical relevance."
-    )
-    with st.expander("Why is this a *living* review rather than just a meta-analysis?"):
+    with st.expander("Case & PICO · fictional SomniTech trial", expanded=(version == "V0")):
+        st.subheader("The fictional case: Does the SomniTech sleep app work?")
         st.write(
-            "The initial literature search produces V0. Newly published studies are then "
-            "identified through scheduled searches and alerts, screened, assessed, "
-            "and added to the synthesis. Each review version preserves its own "
-            "evidence snapshot. V4 shows how **corrections to existing data** can also "
-            "trigger reanalysis. A search that identifies no eligible new studies "
-            "does not necessarily warrant a new published version."
+            "A research team wants to know whether a **fictional digital sleep intervention** "
+            "works better for adults with insomnia than standard "
+            "**sleep-hygiene advice**. The review includes only "
+            "randomised controlled trials (RCTs). Over time, "
+            "new studies become available, and an incorrectly extracted outcome is later corrected. "
+            "Follow how these events change the evidence."
         )
+        st.markdown("**The research question (PICO)**")
+        p1, p2 = st.columns(2, gap="large")
+        with p1:
+            st.markdown("**P – Population:** Adults with insomnia  \n**I – Intervention:** digital app *SomniTech*")
+        with p2:
+            st.markdown("**C – Comparator:** general sleep-hygiene advice  \n**O – Outcome:** Insomnia Severity Index (ISI) at eight weeks")
+        st.markdown(
+            "**What is being compared?** ISI scores range from 0 to 28; lower scores "
+            "indicate fewer insomnia symptoms. We analyse the **mean difference "
+            "in ISI scores at eight weeks** (intervention minus control), "
+            "not changes from baseline within individual participants. "
+            "An MD of **−2** means that, on average, the intervention group "
+            "scores two ISI points lower than the control group. The adjustable "
+            "threshold of −2 is an **illustrative teaching assumption**, not a validated "
+            "threshold for a clinically meaningful difference."
+        )
+        st.info(
+            "**Getting started:** Select **V0** in the sidebar and inspect the forest plot. "
+            "Then move through **V1–V4**: What happens to the pooled estimate, "
+            "confidence interval, and heterogeneity? Studies shown in orange "
+            "are newly included. Use the sidebar threshold to "
+            "explore different illustrative levels of clinical relevance."
+        )
+        with st.expander("Why is this a *living* review rather than just a meta-analysis?"):
+            st.write(
+                "The initial literature search produces V0. Newly published studies are then "
+                "identified through scheduled searches and alerts, screened, assessed, "
+                "and added to the synthesis. Each review version preserves its own "
+                "evidence snapshot. V4 shows how **corrections to existing data** can also "
+                "trigger reanalysis. A search that identifies no eligible new studies "
+                "does not necessarily warrant a new published version."
+            )
     st.divider()
     st.subheader("Evidence snapshot · " + version)
     guide = VERSION_GUIDE[version]
     st.markdown(f"**Guiding question: {guide['question']}**")
     st.caption("The following metrics reflect only the selected fictional evidence snapshot.")
     a,b,c,d = st.columns(4)
-    a.metric("Studies", f"{fit.k}")
-    b.metric("Participants", f"{fit.n_total:,}".replace(",", "’"))
-    c.metric("Pooled MD", f"{fit.mean:+.2f}")
-    d.metric("I² (Q-based)", f"{fit.i2:.1f} %")
+    a.metric("Studies", f"{fit.k}", delta=f"{fit.k-prev_fit.k:+d}" if prev_fit else None, delta_color="off")
+    b.metric("Participants", f"{fit.n_total:,}",
+             delta=f"{fit.n_total-prev_fit.n_total:+d}" if prev_fit else None, delta_color="off")
+    c.metric("Pooled MD", f"{fit.mean:+.2f}",
+             delta=f"{fit.mean-prev_fit.mean:+.2f}" if prev_fit else None, delta_color="off")
+    d.metric("I² (Q-based)", f"{fit.i2:.1f} %",
+             delta=f"{fit.i2-prev_fit.i2:+.1f} pp" if prev_fit else None, delta_color="off")
     st.caption(f"95% confidence interval: [{fit.ci_low:+.2f}; {fit.ci_high:+.2f}] ISI points · τ² = {fit.tau2:.3f} · Q-p = {fit.q_pvalue:.3g}")
+    if fit.pi_low is not None:
+        st.caption(
+            f"Approximate 95% prediction interval for the true effect in a new setting: "
+            f"[{fit.pi_low:+.2f}; {fit.pi_high:+.2f}] ISI points."
+        )
     st.markdown(
         "**Reading the metrics:** The **MD** is the mean difference "
         "between groups (negative values favour SomniTech). The "
@@ -139,9 +207,16 @@ with section_review:
 
     col_forest, col_side = st.columns([2.25, 1.0], gap="large")
     with col_forest:
-        st.plotly_chart(forest_plot(frame, fit, title=f"Forest Plot · {version}",
-                                    highlight_phase=int(version[-1]) if version in ("V1", "V2", "V3") else None),
-                        width="stretch", key=f"forest_{version}")
+        st.plotly_chart(
+            forest_plot(
+                frame, fit, title=f"Forest plot · {version}",
+                highlight_phase=int(version[-1]) if version in ("V1", "V2", "V3") else None,
+                highlight_ids={"S06"} if version == "V4" else None,
+                previous_effects=calculate_effects(cached_snapshot("V3")) if version == "V4" else None,
+                threshold=threshold, x_range=canonical_forest_range(threshold),
+            ),
+            width="stretch", key=f"forest_{version}",
+        )
         with st.expander("How to read the forest plot: squares, lines, and the diamond"):
             st.markdown(
                 "- **Square:** an individual study's estimated mean difference; "
@@ -151,20 +226,18 @@ with section_review:
                 "width represents the 95% confidence interval of the pooled effect.\n"
                 "- **Dashed line at zero:** no average difference "
                 "between intervention and control.\n"
-                "- **Orange:** newly included studies in V1–V3. By contrast, V4 corrects "
-                "existing study S06.\n\n"
+                "- **Orange circles:** studies newly included in V1–V3. "
+                "- **Red diamond:** corrected study S06 in V4; the grey X marks "
+                "its superseded estimate.\n"
+                "- **Green dotted line below the diamond:** approximate 95% prediction "
+                "interval for a true effect in a new setting (available for k ≥ 3).\n"
+                "- **Red vertical dotted line:** illustrative benefit threshold.\n\n"
                 "**Hover tip:** Point to a square to see the study's MD, "
                 "confidence interval, and weight."
             )
     with col_side:
         st.markdown("#### What changed?")
         st.info(meta["description"])
-        if version != "V0":
-            prev_name = VERSIONS[VERSIONS.index(version) - 1]
-            prev = history.iloc[VERSIONS.index(version)-1]
-            st.metric("Change in MD", f"{fit.mean - prev['mean']:+.2f}",
-                      help=f"Current effect minus the effect in {prev_name}.")
-            st.metric("Change in number of studies", f"{fit.k-int(prev['k']):+d}")
         st.write("**What does this version show?**")
         st.write(guide["observation"])
         st.write("**What should you look for?**")
@@ -215,6 +288,8 @@ with section_review:
                  help=f"{len(lowrisk)} of {len(frame)} studies.")
         b.metric("95% CI for this subset", f"[{lower_fit.ci_low:+.2f}; {lower_fit.ci_high:+.2f}]")
         st.caption("Exploratory sensitivity analysis only. No automatic GRADE certainty assessment; individual RoB 2 domains are not simulated.")
+        if len(lowrisk) == 2:
+            st.caption("Only two studies: the modified Hartung–Knapp interval uses t(1) ≈ 12.71 and can be very wide. A prediction interval is not reported.")
     else:
         st.caption("Fewer than two studies are classified as low risk of bias in this version.")
 
