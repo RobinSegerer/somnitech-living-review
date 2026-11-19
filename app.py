@@ -29,7 +29,7 @@ def cached_snapshot(version_name: str):
 
 
 @st.cache_data(show_spinner=False)
-def cached_frequentist(version_name: str):
+def cached_frequentist_v2(version_name: str):
     return fit_random_effects(snapshot(version_name))
 
 
@@ -47,7 +47,7 @@ def cached_history():
 
 
 @st.cache_data(show_spinner=False)
-def cached_bayesian(version_name: str, clinical_threshold: float,
+def cached_bayesian_v2(version_name: str, clinical_threshold: float,
                     effect_prior_sd: float, heterogeneity_prior_sd: float):
     return fit_bayesian(snapshot(version_name), threshold=clinical_threshold,
                         mu_prior_sd=effect_prior_sd,
@@ -55,7 +55,7 @@ def cached_bayesian(version_name: str, clinical_threshold: float,
 
 
 @st.cache_data(show_spinner=False)
-def cached_density(version_name: str, clinical_threshold: float,
+def cached_density_v2(version_name: str, clinical_threshold: float,
                    effect_prior_sd: float, heterogeneity_prior_sd: float):
     return bayesian_density(snapshot(version_name), threshold=clinical_threshold,
                             mu_prior_sd=effect_prior_sd,
@@ -63,7 +63,7 @@ def cached_density(version_name: str, clinical_threshold: float,
 
 
 @st.cache_data(show_spinner=False)
-def cached_updating(version_name: str, clinical_threshold: float,
+def cached_updating_v2(version_name: str, clinical_threshold: float,
                     effect_prior_sd: float, heterogeneity_prior_sd: float):
     return build_updating_story(version_name, threshold=clinical_threshold,
                                 mu_prior_sd=effect_prior_sd,
@@ -79,7 +79,7 @@ def canonical_forest_range(clinical_threshold: float):
         extent.extend(effects_at_version["ci_low"].tolist())
         extent.extend(effects_at_version["ci_high"].tolist())
         extent.extend([fit_at_version.ci_low, fit_at_version.ci_high])
-        if fit_at_version.pi_low is not None:
+        if getattr(fit_at_version, 'pi_low', None) is not None:
             extent.extend([fit_at_version.pi_low, fit_at_version.pi_high])
     left, right = min(extent), max(extent)
     pad = max(0.75, .05 * (right - left))
@@ -124,11 +124,11 @@ with st.sidebar:
     st.caption("Bayesian analysis: normal–normal hierarchical model; priors can be adjusted in the methods comparison.")
 
 frame = cached_snapshot(version)
-fit = cached_frequentist(version)
+fit = cached_frequentist_v2(version)
 effects = calculate_effects(frame)
 history = cached_history()
 prev_version = VERSIONS[VERSIONS.index(version) - 1] if version != "V0" else None
-prev_fit = cached_frequentist(prev_version) if prev_version else None
+prev_fit = cached_frequentist_v2(prev_version) if prev_version else None
 
 section_review, section_lab, section_methods, section_workflow = st.tabs([
     "01 · Living Review", "02 · Experiment Lab",
@@ -193,7 +193,7 @@ with section_review:
     d.metric("I² (Q-based)", f"{fit.i2:.1f} %",
              delta=f"{fit.i2-prev_fit.i2:+.1f} pp" if prev_fit else None, delta_color="off")
     st.caption(f"95% confidence interval: [{fit.ci_low:+.2f}; {fit.ci_high:+.2f}] ISI points · τ² = {fit.tau2:.3f} · Q-p = {fit.q_pvalue:.3g}")
-    if fit.pi_low is not None:
+    if getattr(fit, 'pi_low', None) is not None:
         st.caption(
             f"Approximate 95% prediction interval for the true effect in a new setting: "
             f"[{fit.pi_low:+.2f}; {fit.pi_high:+.2f}] ISI points."
@@ -457,12 +457,12 @@ with section_lab:
                      delta=f"{result.mean-fit.mean:+.2f} vs. {version}", delta_color="off")
             b.metric("I²", f"{result.i2:.1f} %")
             st.write(f"95% CI **[{result.ci_low:+.2f}; {result.ci_high:+.2f}]** · {result.k} studies")
-            if result.pi_low is not None:
+            if getattr(result, 'pi_low', None) is not None:
                 st.caption(f"Approx. 95% prediction interval: [{result.pi_low:+.2f}; {result.pi_high:+.2f}]")
             if st.toggle("Show Bayesian sensitivity", value=False, key="lab_bayesian_toggle"):
                 simulated_bayes = fit_bayesian(experiment, threshold=threshold)
                 st.metric(f"P(μ < {threshold:g}) · experimental", f"{simulated_bayes.p_relevant:.1%}")
-                st.caption(f"Original version: {cached_bayesian(version, threshold, 5.0, 2.0).p_relevant:.1%}; same default priors in both analyses.")
+                st.caption(f"Original version: {cached_bayesian_v2(version, threshold, 5.0, 2.0).p_relevant:.1%}; same default priors in both analyses.")
             st.caption(
                 "Leave-one-out: uncheck **Include** and apply changes. "
                 "The delta indicator is **new MD minus original MD**. "
@@ -536,14 +536,14 @@ with section_methods:
         "The priors do not assign study-specific weights based on methodological quality."
     )
     st.markdown("#### 2 · Compare estimates and uncertainty intervals")
-    bayes = cached_bayesian(version, threshold, mu_prior_sd, tau_prior_sd)
+    bayes = cached_bayesian_v2(version, threshold, mu_prior_sd, tau_prior_sd)
     fa, fb = st.columns(2, gap="large")
     with fa:
         st.markdown("#### Frequentist")
         st.metric("Pooled MD (REML)", f"{fit.mean:+.2f}")
         st.write(f"95% confidence interval: **[{fit.ci_low:+.2f}; {fit.ci_high:+.2f}]**")
         st.write(f"Between-study variance τ²: **{fit.tau2:.3f}**")
-        if fit.pi_low is not None:
+        if getattr(fit, 'pi_low', None) is not None:
             st.write(f"Approx. 95% prediction interval for θ_new: **[{fit.pi_low:+.2f}; {fit.pi_high:+.2f}]**")
         st.caption("A 95% confidence interval is interpreted through the procedure's long-run coverage, not as a posterior probability.")
     with fb:
@@ -579,7 +579,7 @@ with section_methods:
         "The green band contains 95% of the posterior probability mass. "
         "Change a prior and observe how the distribution and probabilities respond."
     )
-    density = cached_density(version, threshold, mu_prior_sd, tau_prior_sd)
+    density = cached_density_v2(version, threshold, mu_prior_sd, tau_prior_sd)
     st.plotly_chart(posterior_plot(density, threshold, bayes.ci_low, bayes.ci_high),
                     width="stretch", key="bayes_posterior")
     st.divider()
@@ -603,7 +603,7 @@ with section_methods:
         help="V0: original prior and first four trials. V1–V3: previous posterior plus new trials. V4: replace an erroneous outcome; no new trial.",
         key="bayesian_update_to_inspect",
     )
-    story = cached_updating(update_version, threshold, mu_prior_sd, tau_prior_sd)
+    story = cached_updating_v2(update_version, threshold, mu_prior_sd, tau_prior_sd)
     before_label = "Original prior" if story.previous_version is None else f"Posterior from {story.previous_version}"
     after_label = f"Posterior for {story.version}"
     if story.kind == "initial":
@@ -734,7 +734,7 @@ with section_methods:
     )
     b_history = []
     for v in VERSIONS:
-        b = cached_bayesian(v, threshold, mu_prior_sd, tau_prior_sd)
+        b = cached_bayesian_v2(v, threshold, mu_prior_sd, tau_prior_sd)
         b_history.append(dict(Version=v, Probability=b.p_relevant, P_benefit=b.p_benefit))
     b_table = pd.DataFrame(b_history)
     fig = go.Figure(go.Scatter(x=b_table["Version"], y=100*b_table["Probability"],
