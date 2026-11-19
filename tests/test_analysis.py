@@ -71,6 +71,54 @@ def test_input_validation_rejects_zero_sd_and_repeated_id():
 def test_experiment_is_separate_from_canonical_data():
     original = snapshot("V1")
     modified = original.copy()
-    modified.loc[0, "mean_int"] = -4.0
+    modified.loc[0, "mean_int"] = 4.0
     assert fit_random_effects(modified).mean != pytest.approx(fit_random_effects(original).mean)
     assert snapshot("V1").loc[0, "mean_int"] == 12.4
+
+
+def test_prediction_intervals_and_probabilities():
+    for version in VERSIONS:
+        re = fit_random_effects(snapshot(version))
+        b = fit_bayesian(snapshot(version))
+        assert re.pi_low is not None and re.pi_high is not None
+        assert re.pi_low < re.mean < re.pi_high
+        assert re.pi_high - re.pi_low > re.ci_high - re.ci_low
+        assert b.pred_ci_low < b.mean < b.pred_ci_high
+        assert b.pred_ci_high - b.pred_ci_low >= b.ci_high - b.ci_low
+        assert 0 <= b.p_pred_relevant <= b.p_pred_benefit <= 1
+
+
+def test_prediction_interval_not_reported_for_two_studies():
+    f = fit_random_effects(snapshot("V0").iloc[:2])
+    assert f.pi_low is None and f.pi_high is None
+    assert f.ci_high - f.ci_low > 1
+
+
+def test_isi_bounds_and_density_validation():
+    from src.analysis import bayesian_density
+    d = snapshot("V1").copy()
+    d.loc[0, "mean_int"] = 29
+    with pytest.raises(ValueError, match="ISI scale"):
+        validate_studies(d)
+    d.loc[0, "mean_int"] = -1
+    with pytest.raises(ValueError, match="ISI scale"):
+        validate_studies(d)
+    with pytest.raises(ValueError, match="positive"):
+        bayesian_density(snapshot("V1"), mu_prior_sd=0)
+
+
+def test_bayesian_density_adaptive_limits_cover_credible_interval():
+    from src.analysis import bayesian_density
+    data = snapshot("V2")
+    d = bayesian_density(data, mu_prior_sd=10, tau_prior_sd=4)
+    b = fit_bayesian(data, mu_prior_sd=10, tau_prior_sd=4)
+    assert d["MD"].min() < b.ci_low and d["MD"].max() > b.ci_high
+    assert d["MD"].min() <= -2 <= d["MD"].max()
+    assert abs(np.trapezoid(d["Posterior density"], d["MD"]) - 1) < .005
+
+
+def test_predictive_effect_probability_responds_to_heterogeneity():
+    b1 = fit_bayesian(snapshot("V1"))
+    b2 = fit_bayesian(snapshot("V2"))
+    assert b2.tau_mean > b1.tau_mean
+    assert b2.p_pred_relevant < b1.p_pred_relevant
