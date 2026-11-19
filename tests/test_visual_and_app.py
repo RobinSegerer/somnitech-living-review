@@ -49,3 +49,10 @@ def test_updating_tracks_tau_mean():
     assert v1.posterior_tau_mean > 0
     assert v2.prior_tau_mean == v1.posterior_tau_mean
     assert v2.posterior_tau_mean > v2.prior_tau_mean
+
+
+def test_streamlit_application_smoke_render():
+    """Run the UI without a browser to catch widget and runtime regressions."""
+    from streamlit.testing.v1 import AppTest
+    app = AppTest.from_file("app.py", default_timeout=120).run()
+    assert len(app.exception) == 0, [str(x.message) for x in app.exception]
