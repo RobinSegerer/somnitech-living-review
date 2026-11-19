@@ -1,0 +1,7 @@
+version,search_date,activity,identified,screened,full_texts,included
+V0,2024-06-01,Initial search,210,210,18,4
+V0,2024-12-01,Monitoring without new inclusions,63,63,3,0
+V1,2025-07-01,Update search,122,122,9,2
+V2,2026-09-01,Update search,168,168,10,3
+V3,2027-07-01,Update search,142,142,8,4
+V4,2027-10-01,Data correction only (no search),0,0,0,0
