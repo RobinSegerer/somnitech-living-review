@@ -13,6 +13,9 @@ RED = "#b95d59"
 GREEN = "#168a7b"
 GREY = "#8a96a4"
 
+# Compatibility stamp for Streamlit hot-redeploys.
+PLOT_INTERFACE_VERSION = "forest-2026-11-v3"
+
 
 def forest_plot(frame: pd.DataFrame, fit: MetaResult, title: str = "Forest plot",
                 highlight_phase: int | None = None,
