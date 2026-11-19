@@ -96,7 +96,8 @@ def forest_plot(frame: pd.DataFrame, fit: MetaResult, title: str = "Forest plot"
     return fig
 
 
-def history_plot(history: pd.DataFrame, selected: str, threshold: float) -> go.Figure:
+def history_plot(history: pd.DataFrame, selected: str, threshold: float,
+                 adjusted: pd.DataFrame | None = None) -> go.Figure:
     fig = go.Figure()
     for row in history.itertuples():
         color = ORANGE if row.version == selected else BLUE
@@ -109,6 +110,21 @@ def history_plot(history: pd.DataFrame, selected: str, threshold: float) -> go.F
                          color=color), showlegend=False,
             hovertemplate=(f"{row.version}: MD {row.mean:.2f}<br>95% CI "
                            f"[{row.ci_low:.2f}; {row.ci_high:.2f}]<extra></extra>")))
+    if adjusted is not None:
+        # Distinct dotted whiskers for conservative simultaneous intervals.
+        for index, row in adjusted.reset_index(drop=True).iterrows():
+            fig.add_trace(go.Scatter(
+                x=[row["adjusted_low"], row["adjusted_high"]],
+                y=[row["version"], row["version"]], mode="lines",
+                line=dict(color="#6c51a2", width=4, dash="dot"),
+                name="Illustrative Bonferroni interval",
+                showlegend=(index == 0),
+                hovertemplate=(
+                    f"{row['version']}: adjusted CI "
+                    f"[{row['adjusted_low']:.2f}; {row['adjusted_high']:.2f}]"
+                    "<extra></extra>"
+                ),
+            ))
     fig.add_vline(x=0, line_color=GREY, line_dash="dash", annotation_text="No effect", annotation_position="top right")
     fig.add_vline(x=threshold, line_color=ORANGE, line_dash="dot",
                   annotation_text="Illustrative relevance threshold", annotation_position="top left")
@@ -192,5 +208,29 @@ def updating_plot(story, threshold: float) -> go.Figure:
             showgrid=False,
         ),
         legend=dict(orientation="h", yanchor="top", y=-.28, x=0),
+    )
+    return fig
+
+
+def weight_comparison_plot(weights: pd.DataFrame) -> go.Figure:
+    """Compare precision weights without conflating weights with effect size."""
+    fig = go.Figure()
+    for name, color in [
+        ("Common-effect (%)", BLUE),
+        ("Random-effects (%)", ORANGE),
+    ]:
+        fig.add_trace(go.Bar(
+            x=weights[name], y=weights["Study"], orientation="h",
+            name=name, marker_color=color,
+            hovertemplate="%{y}<br>Weight: %{x:.1f}%<extra></extra>",
+        ))
+    fig.update_layout(
+        title="How heterogeneity changes study weights",
+        template="plotly_white", barmode="group",
+        height=max(340, 85 + 33 * len(weights)),
+        margin=dict(l=10, r=20, t=50, b=50),
+        xaxis_title="Relative weight (%)",
+        yaxis=dict(autorange="reversed", automargin=True),
+        legend=dict(orientation="h", yanchor="bottom", y=1.01, x=0),
     )
     return fig
