@@ -168,7 +168,8 @@ with section_review:
             "are newly included. Use the sidebar threshold to "
             "explore different illustrative levels of clinical relevance."
         )
-        with st.expander("Why is this a *living* review rather than just a meta-analysis?"):
+        with st.container(border=True):
+            st.markdown("**Why is this a *living* review rather than just a meta-analysis?**")
             st.write(
                 "The initial literature search produces V0. Newly published studies are then "
                 "identified through scheduled searches and alerts, screened, assessed, "
