@@ -303,8 +303,8 @@ with section_lab:
     )
     st.markdown("**What can you try?**")
     st.markdown(
-        "1. **Edit a study:** Change an intervention or control "
-        "group mean, standard deviation, or sample size. "
+        "1. **Edit or exclude a study:** Change a mean, standard deviation "
+        "or sample size, or uncheck **Include** for leave-one-out analysis. "
         "Then select **Apply changes and recalculate**.\n"
         "2. **Add a new study:** Open the entry form below "
         "the table, enter data for both arms, and select "
@@ -312,7 +312,9 @@ with section_lab:
         "3. **Compare results:** The right-hand panel shows the new pooled "
         "MD, I², and forest plot. Changes are measured "
         "against the unmodified review version.\n"
-        "4. **Reset or export:** Use the reset button "
+        "4. **Optional Bayesian comparison:** Turn on the Bayesian metric "
+        "to see how P(μ below threshold) changes as well.\n"
+        "5. **Reset or export:** Use the reset button "
         "to start again; download your experimental "
         "study data as a CSV file."
     )
@@ -333,13 +335,13 @@ with section_lab:
     )
     if "exp_baseline" not in st.session_state or st.session_state.exp_baseline != version:
         st.session_state.exp_baseline = version
-        st.session_state.exp_frame = snapshot(version)
+        st.session_state.exp_frame = snapshot(version).assign(include=True).assign(include=True)
         st.session_state.editor_revision = st.session_state.get("editor_revision", 0) + 1
 
     left, right = st.columns([1.4, 1.0], gap="large")
     with left:
         st.markdown("**Edit existing studies**")
-        exp_cols = ["study_id", "author_year", "n_int", "mean_int", "sd_int",
+        exp_cols = ["include", "study_id", "author_year", "n_int", "mean_int", "sd_int",
                     "n_ctrl", "mean_ctrl", "sd_ctrl", "rob"]
         with st.form(f"editor_{st.session_state.editor_revision}"):
             edited = st.data_editor(
@@ -347,12 +349,13 @@ with section_lab:
                 width="stretch", hide_index=True,
                 disabled=["study_id", "author_year"],
                 column_config={
+                    "include": st.column_config.CheckboxColumn("Include", help="Uncheck to exclude this study from the current synthesis."),
                     "study_id": st.column_config.TextColumn("ID"),
                     "author_year": st.column_config.TextColumn("Study"),
                     "n_int": st.column_config.NumberColumn("n Int.", min_value=2, step=1, format="%d"),
                     "n_ctrl": st.column_config.NumberColumn("n Control", min_value=2, step=1, format="%d"),
-                    "mean_int": st.column_config.NumberColumn("Mean Int.", format="%.2f"),
-                    "mean_ctrl": st.column_config.NumberColumn("Mean Control", format="%.2f"),
+                    "mean_int": st.column_config.NumberColumn("Mean Int.", min_value=0.0, max_value=28.0, format="%.2f"),
+                    "mean_ctrl": st.column_config.NumberColumn("Mean Control", min_value=0.0, max_value=28.0, format="%.2f"),
                     "sd_int": st.column_config.NumberColumn("SD Int.", min_value=0.01, format="%.2f"),
                     "sd_ctrl": st.column_config.NumberColumn("SD Control", min_value=0.01, format="%.2f"),
                     "rob": st.column_config.SelectboxColumn("Risk of Bias", options=["Low", "Some concerns", "High"]),
@@ -362,16 +365,24 @@ with section_lab:
             saved = st.form_submit_button("Apply changes and recalculate", type="primary")
         if saved:
             try:
-                validate_studies(edited)
-                # Preserve metadata, keep editable values as current exercise state.
+                edited = edited.copy()
+                edited["include"] = edited["include"].fillna(False).astype(bool)
+                validate_studies(edited, min_studies=0)
+                if edited["include"].sum() < 2:
+                    raise ValueError("Keep at least two studies included for meta-analysis.")
+                # Align on immutable study_id and keep unedited metadata, rather
+                # than assigning values row-by-row (which can coerce dtypes).
                 current = st.session_state.exp_frame.copy().set_index("study_id")
-                for _, row in edited.iterrows():
-                    sid = row["study_id"]
-                    for col in exp_cols:
-                        current.at[sid, col] = row[col]
+                update = edited.set_index("study_id")
+                for col in exp_cols:
+                    if col != "study_id":
+                        current[col] = update[col].reindex(current.index).to_numpy()
+                for col in ("n_int", "n_ctrl"):
+                    current[col] = current[col].astype(int)
+                current["include"] = current["include"].astype(bool)
                 st.session_state.exp_frame = current.reset_index()
                 st.success("The experimental meta-analysis has been updated.")
-            except (ValueError, TypeError) as exc:
+            except (ValueError, TypeError, KeyError) as exc:
                 st.error(f"Invalid study data: {exc}")
         if st.button("Reset experiment to original version"):
             st.session_state.exp_frame = snapshot(version)
@@ -385,8 +396,8 @@ with section_lab:
                 n_int = n1.number_input("N intervention", min_value=2, value=200, step=10)
                 n_ctrl = n2.number_input("N control", min_value=2, value=200, step=10)
                 x1, x2 = st.columns(2)
-                mean_int = x1.number_input("Mean ISI, intervention", value=11.0, step=.1)
-                mean_ctrl = x2.number_input("Mean ISI, control", value=12.0, step=.1)
+                mean_int = x1.number_input("Mean ISI, intervention", min_value=0.0, max_value=28.0, value=11.0, step=.1)
+                mean_ctrl = x2.number_input("Mean ISI, control", min_value=0.0, max_value=28.0, value=12.0, step=.1)
                 x3, x4 = st.columns(2)
                 sd_int = x3.number_input("SD intervention", min_value=.01, value=4.0, step=.1)
                 sd_ctrl = x4.number_input("SD control", min_value=.01, value=4.0, step=.1)
@@ -401,7 +412,7 @@ with section_lab:
                 row.update(study_id=f"EXP-{suffix:03d}", author_year=study_name,
                            n_int=int(n_int), n_ctrl=int(n_ctrl), mean_int=float(mean_int),
                            mean_ctrl=float(mean_ctrl), sd_int=float(sd_int),
-                           sd_ctrl=float(sd_ctrl), rob=rob, phase=4)
+                           sd_ctrl=float(sd_ctrl), rob=rob, phase=4, include=True)
                 try:
                     st.session_state.exp_frame = validate_studies(
                         pd.concat([existing, pd.DataFrame([row])], ignore_index=True))
@@ -412,7 +423,11 @@ with section_lab:
 
     with right:
         try:
-            experiment = validate_studies(st.session_state.exp_frame)
+            experiment = validate_studies(
+                st.session_state.exp_frame.loc[
+                    st.session_state.exp_frame["include"].astype(bool)
+                ]
+            )
             result = fit_random_effects(experiment)
             st.markdown("**Recalculated results**")
             st.caption(
@@ -425,7 +440,14 @@ with section_lab:
                      delta=f"{result.mean-fit.mean:+.2f} vs. {version}", delta_color="off")
             b.metric("I²", f"{result.i2:.1f} %")
             st.write(f"95% CI **[{result.ci_low:+.2f}; {result.ci_high:+.2f}]** · {result.k} studies")
+            if result.pi_low is not None:
+                st.caption(f"Approx. 95% prediction interval: [{result.pi_low:+.2f}; {result.pi_high:+.2f}]")
+            if st.toggle("Show Bayesian sensitivity", value=False, key="lab_bayesian_toggle"):
+                simulated_bayes = fit_bayesian(experiment, threshold=threshold)
+                st.metric(f"P(μ < {threshold:g}) · experimental", f"{simulated_bayes.p_relevant:.1%}")
+                st.caption(f"Original version: {cached_bayesian(version, threshold, 5.0, 2.0).p_relevant:.1%}; same default priors in both analyses.")
             st.caption(
+                "Leave-one-out: uncheck **Include** and apply changes. "
                 "The delta indicator is **new MD minus original MD**. "
                 "A positive value indicates a shift towards a less "
                 "negative effect; a negative delta indicates a shift towards "
@@ -433,7 +455,7 @@ with section_lab:
             )
             st.plotly_chart(forest_plot(experiment, result, title="Experimental forest plot"),
                             width="stretch", key="experimental_forest")
-            out = calculate_effects(experiment)
+            out = calculate_effects(st.session_state.exp_frame)
             st.download_button("Download experimental study data (CSV)",
                                data=out.to_csv(index=False).encode("utf-8-sig"),
                                file_name="somnitech_experiment.csv", mime="text/csv")
